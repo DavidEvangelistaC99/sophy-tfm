@@ -91,7 +91,8 @@ phi_ = 0
 rep_ = 250.0
 
 H0 = -1.75
-RMIX = 5.45
+# Union range
+RMIX = 5.8
 
 chirp_tx_1 = modf.chirpModUnion_1(  ipp,
                                     sr_rx, 
