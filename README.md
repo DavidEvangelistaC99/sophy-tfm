@@ -1,5 +1,8 @@
 ## Repository Structure
+- `results/`: Doppler spectra and PPI plots
 - `schain-spectra/`: library used to analyze spectra by profiles
+- `schain-pp/`: library used to analyze Pulse Pair algorithm by profiles
+
 
 ## Requirements 
 
