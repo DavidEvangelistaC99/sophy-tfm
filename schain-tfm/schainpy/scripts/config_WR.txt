@@ -1,0 +1,45 @@
+#*******************************************************************************
+#*************ARCHIVO DE CONFIGURACION - RADAR METEOROLOGICO********************
+#*******************************************************************************
+# 1-Resolucion_angular(Grados º)-F
+1.0
+# 2-Velocidad_Pedestal Azimuth(º/s)-F
+4.0
+# 3-Posicion_Pedestal Azimuth(º/s)-F
+0.0
+# 4-Posicion_Pedestal Elevacion(º/s)-F
+30.0
+# 5-IPP(useg)-F
+400
+# n-PulsePair-nFFTPoints-R
+625
+# 6-Cantidad_Muestras_archivo_pedestal-F
+100
+# 7-Tiempo_por_muestra_pedestal-F
+0.01
+# Tiempo_archivo_por_pedestal-R
+1.0
+# 8-Bloques_por_arhivo_adquisicion-F
+100.0
+# tiempo_por_archivo_adquisicion-R
+25.0
+# mode Time Domain(T , 1) or Frequency Domain(F , 0)
+1
+# path_p
+/home/developer/Downloads/Pedestal/P2021093
+# path_a
+/home/developer/Downloads/HDF5_TESTPP2V3/d2021093
+# online
+0
+# Directorio final
+/home/developer/Downloads/HDF5_WR/
+#NTX
+250
+#TXA
+120
+#TXB
+130
+#CODIFICACION DE TXA
+BARKER 3
+#CODIFICACION DE TXB
+CC64
