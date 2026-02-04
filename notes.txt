@@ -1,1 +1,1 @@
-- Change conv function by profiles for blocks
+- Change conv function by profiles to blocks
