@@ -764,6 +764,7 @@ class Decoder(Operation):
     def __convolutionByBlockInTime(self, data):
 
         print("Conv By Block")
+        print("Hola")
 
         repetitions = int(self.__nProfiles / self.nCode)
         junk = numpy.lib.stride_tricks.as_strided(self.code, (repetitions, self.code.size), (0, self.code.itemsize))
