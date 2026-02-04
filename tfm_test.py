@@ -47,8 +47,8 @@ readUnitConfObj = controllerObj.addReadUnit(datatype='DigitalRFReader',
                                             # set=0,
                                             # online=0,
                                             # walk=1,
-                                            # getByBlock = 1,
-                                            # nProfileBlocks = 500,
+                                            getByBlock = 1,
+                                            nProfileBlocks = 500,
                                             # Important for use with the SOPHy radar
                                             ippKm = 60)
 
