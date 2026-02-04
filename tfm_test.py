@@ -37,22 +37,23 @@ ymax = '60'
 ############################ READING UNIT #############################
 #######################################################################
 
+N = int(500)
+
 readUnitConfObj = controllerObj.addReadUnit(datatype='DigitalRFReader',
                                             path=path,
                                             startDate="2026/01/01",
                                             endDate="2026/12/30",
                                             startTime='00:00:00',
                                             endTime='23:59:59',
-                                            # delay=0,
-                                            # set=0,
-                                            # online=0,
-                                            # walk=1,
+                                            # delay=30,
+                                            ippKm = 60,
+                                            walk=1,
+                                            # Don't work by blocks
                                             getByBlock = 1,
-                                            nProfileBlocks = 500,
-                                            # Important for use with the SOPHy radar
-                                            ippKm = 60)
+                                            nProfileBlocks = N,
+                                            )
 
-opObj11 = readUnitConfObj.addOperation(name='printInfo')
+# opObj11 = readUnitConfObj.addOperation(name='printInfo')
 # opObj11 = readUnitConfObj.addOperation(name='printNumberOfBlock')
 
 # voltage -> procUnitConfObjA 
@@ -67,7 +68,7 @@ op.addParameter(name='frequency', value='9.345e9', format='float')
 op1 = procUnitConfObjA.addOperation(name='ProfileSelector')
 # Change the value of the number of profiles to a fixed value (nProfiles)
 # op1.addParameter(name='profileRangeList', value='0,249')
-op1.addParameter(name='profileRangeList', value='0,499')
+op1.addParameter(name='profileRangeList', value='0,249')
 
 # Parameters
 A_1 = 1.0

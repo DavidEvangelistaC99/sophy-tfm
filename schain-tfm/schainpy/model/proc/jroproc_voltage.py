@@ -754,6 +754,8 @@ class Decoder(Operation):
 
     def __convolutionInTime(self, data, code_1, code_2, DC_1, H0, RMIX):
 
+        print("Conv By Profile")
+
         code = self.code[self.__profIndex]
 
         # code_large = numpy.array(dc_1, dtype = numpy.complex64)
