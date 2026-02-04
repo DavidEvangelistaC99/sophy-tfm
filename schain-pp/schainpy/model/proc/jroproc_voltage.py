@@ -7,6 +7,7 @@ from schainpy.utils import log
 from time import time
 from scipy import signal
 
+import matplotlib.pyplot as plt
 
 class VoltageProc(ProcessingUnit):
 
@@ -761,10 +762,9 @@ class Decoder(Operation):
 
         return self.datadecTime
 
-    def __convolutionByBlockInTime(self, data):
+    def __convolutionByBlockInTime(self, data, code_1, code_2, DC_1, H0, RMIX):
 
         print("Conv By Block")
-        print("Hola")
 
         repetitions = int(self.__nProfiles / self.nCode)
         junk = numpy.lib.stride_tricks.as_strided(self.code, (repetitions, self.code.size), (0, self.code.itemsize))
@@ -774,7 +774,21 @@ class Decoder(Operation):
 
         for i in range(self.__nChannels):
             for j in profilesList:
-                self.datadecTime[i,j,:] = numpy.correlate(data[i,j,:], code_block[j,:], mode='full')[self.nBaud-1:]
+
+                corr_1 = numpy.correlate(data[i,j,:], code_1, mode='full')[self.nBaud-1:]
+                corr_2 = numpy.correlate(data[i,j,:], code_2, mode='full')[self.nBaud-1:]
+
+                # Adjust displacement, review
+                d = -int(DC_1*len(data[i,j,:])/100)
+
+                corr_2 = numpy.roll(corr_2, d)
+
+                range_km = 60
+                r = int((RMIX + -(H0))*len(data[i,j,:])/range_km)
+
+                # self.datadecTime[i,j,:] = numpy.correlate(data[i,j,:], code_block[j,:], mode='full')[self.nBaud-1:]
+                self.datadecTime[i,j,:] = numpy.concatenate((corr_2[:r], corr_1[r:]))
+
         return self.datadecTime
 
     def __convolutionByBlockInFreq(self, data):
@@ -793,7 +807,7 @@ class Decoder(Operation):
         return data
 
 
-    def run(self, dataOut, code=None, nCode=None, nBaud=None, mode = 0, osamp=None, times=None):
+    def run(self, dataOut, code=None, nCode=None, nBaud=None, mode = 0, osamp=None, times=None, code_1=None, code_2=None, DC_1=None, H0=None, RMIX=None):
 
         if dataOut.flagDecodeData:
             print("This data is already decoded, recoding again ...")
@@ -833,7 +847,7 @@ class Decoder(Operation):
             """
 
             if mode == 0:
-                datadec = self.__convolutionByBlockInTime(dataOut.data)
+                datadec = self.__convolutionByBlockInTime(dataOut.data, code_1, code_2, DC_1, H0, RMIX)
             if mode == 1:
                 datadec = self.__convolutionByBlockInFreq(dataOut.data)
         else:
