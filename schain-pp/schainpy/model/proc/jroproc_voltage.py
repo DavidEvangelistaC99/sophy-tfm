@@ -775,19 +775,29 @@ class Decoder(Operation):
         for i in range(self.__nChannels):
             for j in profilesList:
 
-                corr_1 = numpy.correlate(data[i,j,:], code_1, mode='full')[self.nBaud-1:]
-                corr_2 = numpy.correlate(data[i,j,:], code_2, mode='full')[self.nBaud-1:]
+                # corr_1 = numpy.correlate(data[i,j,:], code_1, mode='full')[self.nBaud-1:]
+                # corr_2 = numpy.correlate(data[i,j,:], code_2, mode='full')[self.nBaud-1:]
 
                 # Adjust displacement, review
+                # d = -int(DC_1*len(data[i,j,:])/100)
+
+                # print(corr_2.shape)
+                # corr_2 = numpy.roll(corr_2, d)
+
+                # print(corr_2.shape)
+
+                # range_km = 60
+                # r = int((RMIX + -(H0))*len(data[i,j,:])/range_km)
+
+                self.datadecTime[i,j,:] = numpy.correlate(data[i,j,:], code_block[j,:], mode='full')[self.nBaud-1:]
+
                 d = -int(DC_1*len(data[i,j,:])/100)
+                # print(d)
 
-                corr_2 = numpy.roll(corr_2, d)
+                self.datadecTime[i,j,:] = numpy.roll(self.datadecTime[i,j,:], d)
 
-                range_km = 60
-                r = int((RMIX + -(H0))*len(data[i,j,:])/range_km)
-
-                # self.datadecTime[i,j,:] = numpy.correlate(data[i,j,:], code_block[j,:], mode='full')[self.nBaud-1:]
-                self.datadecTime[i,j,:] = numpy.concatenate((corr_2[:r], corr_1[r:]))
+                # self.datadecTime[i,j,:] = numpy.concatenate((corr_2[:r], corr_1[r:]))
+                # self.datadecTime[i,j,:] = corr_2
 
         return self.datadecTime
 

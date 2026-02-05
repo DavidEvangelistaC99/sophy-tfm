@@ -7,3 +7,5 @@
 05/02/26
 
 - First review some code lines of jroproc_voltage.py in schain-pp 
+- Short pulse diplacement:
+	MASK = 0.1
