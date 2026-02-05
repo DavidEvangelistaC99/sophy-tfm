@@ -3,3 +3,7 @@
 
 
 - We should deactivate "enable_2" parameter
+
+05/02/26
+
+- First review some code lines of jroproc_voltage.py in schain-pp 
