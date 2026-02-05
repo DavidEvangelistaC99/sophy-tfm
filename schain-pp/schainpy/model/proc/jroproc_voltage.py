@@ -791,6 +791,18 @@ class Decoder(Operation):
                 
                 
                 corr_2 = signal.correlate(data[i], numpy.array(code_2).reshape(1, -1), mode='full')[:self.__nProfiles,self.nBaud-1:]
+                # print("shape data")
+                # print(data[i].shape)
+                # print(len(data[i,0,:]))
+                d = -int(DC_1*len(data[i,0,:])/100)
+                
+                corr_2 = numpy.roll(corr_2, shift=d, axis=1)
+                
+                # print(corr_2.shape)
+                
+                # print(d)
+                
+                # print(corr_2.shape)
                 self.datadecTime[i] = corr_2
                 
                 
