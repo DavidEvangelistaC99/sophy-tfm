@@ -790,7 +790,10 @@ class Decoder(Operation):
                 
                 
                 
-                corr_2 = signal.correlate(data[i], numpy.array(code_2).reshape(1, -1), mode='full')[:self.__nProfiles,self.nBaud-1:]
+                corr_2 = signal.correlate(data[i], numpy.array(code_2).reshape(1, -1), mode='full')[:self.__nProfiles,len(code_2)-1:]
+                
+                # Agregamos nuevo revisar si sale mal: ojo con el slicing cambio en nBaud por len(code_x)
+                corr_1 = signal.correlate(data[i], numpy.array(code_1).reshape(1, -1), mode='full')[:self.__nProfiles,len(code_1)-1:]
                 # print("shape data")
                 # print(data[i].shape)
                 # print(len(data[i,0,:]))
@@ -798,15 +801,33 @@ class Decoder(Operation):
                 
                 corr_2 = numpy.roll(corr_2, shift=d, axis=1)
                 
+                range_km = 60
+                r = int((RMIX + -(H0))*len(data[i,0,:])/range_km)
+                
+                # print(corr_2.shape)
+                # print(corr_1.shape)
+                
+                # self.datadecTime[i] = numpy.concatenate((corr_2[:r], corr_1[r:]))
+                
+                self.datadecTime[i] = numpy.concatenate((corr_2[:, :r], corr_1[:, r:]), axis=1)
+                
+                # print(self.datadecTime[i].shape)
+                
+                
+                # print(self.datadecTime[i].shape)
                 # print(corr_2.shape)
                 
                 # print(d)
                 
                 # print(corr_2.shape)
-                self.datadecTime[i] = corr_2
                 
                 
                 
+                
+                # self.datadecTime[i] = corr_2
+                
+                
+                #####################################################################3
                 
                 # print(corr_2.shape)
 
