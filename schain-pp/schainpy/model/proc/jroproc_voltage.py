@@ -539,7 +539,7 @@ class CohInt(Operation):
 
         self.__dataReady = False
         avgdata = None
-        #         n = None
+        # n = None
         # print data
         # raise
         self.putData(data)
@@ -766,18 +766,60 @@ class Decoder(Operation):
 
         print("Conv By Block")
 
-        repetitions = int(self.__nProfiles / self.nCode)
-        junk = numpy.lib.stride_tricks.as_strided(self.code, (repetitions, self.code.size), (0, self.code.itemsize))
-        junk = junk.flatten()
-        code_block = numpy.reshape(junk, (self.nCode*repetitions, self.nBaud))
-        profilesList = range(self.__nProfiles)
+        #repetitions = int(self.__nProfiles / self.nCode)
+        #junk = numpy.lib.stride_tricks.as_strided(self.code, (repetitions, self.code.size), (0, self.code.itemsize))
+        #junk = junk.flatten()
+        #code_block_1 = numpy.reshape(junk, (self.nCode*repetitions, self.nBaud))
+        #profilesList = range(self.__nProfiles)
 
         for i in range(self.__nChannels):
-            for j in profilesList:
+                
+                # self.datadecTime[i] = signal.correlate(data[i], self.code, mode='full')[:self.__nProfiles,self.nBaud-1:]
+                #print(self.code.shape)
+                
+                # print(len(code_2))
+                # print(type(code_2))
+                
+                # code_2 = numpy.array(code_2).reshape(1, -1)
+                
+                #print(code_2.shape)
 
+                # print(self.code.shape)
+                # print(self.datadecTime.shape)
+                # (2, 500, 2000)
+                
+                
+                
+                corr_2 = signal.correlate(data[i], numpy.array(code_2).reshape(1, -1), mode='full')[:self.__nProfiles,self.nBaud-1:]
+                self.datadecTime[i] = corr_2
+                
+                
+                
+                
+                # print(corr_2.shape)
+
+                # self.datadecTime[i] = corr_2 
+                # print(corr_2.shape)
+
+
+
+            #for j in profilesList:
+                
+                # print(len(data[i,j,:]))
                 # corr_1 = numpy.correlate(data[i,j,:], code_1, mode='full')[self.nBaud-1:]
-                # corr_2 = numpy.correlate(data[i,j,:], code_2, mode='full')[self.nBaud-1:]
 
+                '''for i in range(self.__nChannels):
+            #for j in profilesList:
+            self.datadecTime[i] = signal.correlate(data[i], self.code, mode='full')[:self.__nProfiles,self.nBaud-1:]
+        return self.datadecTime'''
+                
+
+                #for i in range(self.__nChannels):
+            
+
+                # print(len(corr_1))
+                # corr_2 = numpy.correlate(data[i,j,:], code_2, mode='full')[self.nBaud-1:]
+                # print(len(data[i,j,:]))
                 # Adjust displacement, review
                 # d = -int(DC_1*len(data[i,j,:])/100)
 
@@ -789,12 +831,19 @@ class Decoder(Operation):
                 # range_km = 60
                 # r = int((RMIX + -(H0))*len(data[i,j,:])/range_km)
 
-                self.datadecTime[i,j,:] = numpy.correlate(data[i,j,:], code_block[j,:], mode='full')[self.nBaud-1:]
+                # self.datadecTime[i,j,:] = numpy.correlate(data[i,j,:], code_2, mode='full')[self.nBaud-1:]
+                # self.datadecTime[i,j,:] = numpy.correlate(data[i,j,:], code_block[j,:], mode='full')[self.nBaud-1:]
+                # print(self.datadecTime.shape)
 
-                d = -int(DC_1*len(data[i,j,:])/100)
+
+
+                # print(len(self.datadecTime[i,j,:]))
+                # d = -int(DC_1*len(data[i,j,:])/100)
                 # print(d)
 
-                self.datadecTime[i,j,:] = numpy.roll(self.datadecTime[i,j,:], d)
+                # self.datadecTime[i,j,:] = numpy.roll(self.datadecTime[i,j,:], d)
+
+                # print(self.datadecTime.shape)
 
                 # self.datadecTime[i,j,:] = numpy.concatenate((corr_2[:r], corr_1[r:]))
                 # self.datadecTime[i,j,:] = corr_2
