@@ -112,7 +112,7 @@ chirp_tx_1 = modf.chirpModUnion_1(  ipp,
 _, chirp_tx_large = modf.chirpMod(A_1, ipp, dc_1, sr_rx, sr_rx, fc_1, bw_1, t_d = 0.0, window = window_1, mode_f = 0)
 _, chirp_tx_short = modf.chirpMod(A_2, ipp, dc_2, sr_rx, sr_rx, fc_2, bw_2, t_d = 0.0, window = window_2, mode_f = 0)
 
-code_ = chirp_tx_short
+code_ = chirp_tx_large
 code = [code_]
 
 ## 4 ##

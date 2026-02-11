@@ -801,6 +801,9 @@ class Decoder(Operation):
                 
                 corr_2 = numpy.roll(corr_2, shift=d, axis=1)
                 
+
+                # RMIX = 5.8
+                # H0   = -1.75
                 range_km = 60
                 r = int((RMIX + -(H0))*len(data[i,0,:])/range_km)
                 
@@ -1693,6 +1696,9 @@ class PulsePair_vRF(Operation):
         return
 
     def pushData(self,dataOut):
+        
+        DC_1 = 10
+        DC_2 = 1
         '''
         Return the PULSEPAIR and the profiles used in the operation
         Affected :  self.__profileIndex
@@ -1715,8 +1721,10 @@ class PulsePair_vRF(Operation):
         5.) lag_0
         Este parametro esta dividido por los factores: nro. perfiles, nro intCoh y pwcode
         Igual a data_power
+        
 
         '''
+        
         #----------------- Remove DC-----------------------------------
         if self.removeDC==True:
             mean    = numpy.nanmean(self.__buffer,1)
@@ -1726,21 +1734,71 @@ class PulsePair_vRF(Operation):
         #------------------Calculo de Potencia ------------------------
         pair0       = self.__buffer*numpy.conj(self.__buffer)#* 10.0
         pair0       = pair0.real
+        
         #-----------------Calculo de Cscp------------------------------ New
         if len(self.__buffer)>1:
             cspc_pair01 = self.__buffer[0]*numpy.conjugate(self.__buffer[1])
+            
         #------------------  Data Decodificada------------------------
+        
+        RMIX = 5.8
+        H0   = -1.75
+        range_km = 60
+        r = int((RMIX + -(H0))*len(self.__buffer[0,0,:])/range_km)
+        
+        # t = [i for i in range(len(self.__buffer[0,0,:r]))]
+        # plt.plot(t,self.__buffer[0,0,:r])
+        # plt.show()
+                
         pwcode =  1
         if dataOut.flagDecodeData == True:
-            # Cambio CHIRP
-            pwcode = numpy.sum(numpy.abs(dataOut.code[0])**2)
-            # pwcode = numpy.sum(dataOut.code[0]**2)
+            # Cambio CHIRP DAVID
+            # pwcode_1 = numpy.sum(numpy.abs(dataOut.code[0][:200])**2)
+            # pwcode_2 = numpy.sum(numpy.abs(dataOut.code[0][200:220])**2)
+            
+            # print(pwcode_1)
+            # print(pwcode_2)
+            
+            #######################
+            
+            pwcode = numpy.sum(numpy.abs(dataOut.code[0]**2))
+            
+            ######################
+            
+            # print(pwcode)
+            # Colocar el arreglo del pulso corto y largo para ver la dimension de ambos: CUMPLE
+        # print(pwcode_1)
+        # print(pwcode_2)
+        # print(pair0[0,:,:].shape)
+        # print(dataOut.code[0].shape)
+        # print(len(dataOut.code[0]))
+        # print(pwcode)
         #------------------Calculo de Ruido x canal--------------------
-        self.noise  = numpy.zeros(self.__nch)
+        
+        
 
+        #print(self.__nHeis.shape)
+        pwcode_bins = numpy.zeros(len(self.__buffer[0,0,:]))
+
+        pwcode_bins[:] = pwcode
+        # pwcode_bins[:r] = pwcode_1
+        # pwcode_bins[r:] = pwcode_2
+
+        pwcode_buffer = pwcode_bins.reshape(1, 1, len(self.__buffer[0,0,:]))
+        pwcode_buffer = numpy.tile(pwcode_buffer,[self.__nch, self.__nProf, 1])
+
+        # print(pwcode_buffer.shape)
+        
+        pair0_norm = pair0 / pwcode_buffer
+
+        self.noise  = numpy.zeros(self.__nch)
+        
         for i in range(self.__nch):
+
             daux         = numpy.sort(pair0[i,:,:],axis= None)
-            self.noise[i]=hildebrand_sekhon( daux/pwcode,self.nCohInt)
+            self.noise[i]=hildebrand_sekhon(daux/pwcode, self.nCohInt)
+            # self.noise[i]=hildebrand_sekhon(daux/pwcode,self.nCohInt)
+            # print(self.noise[i].shape)
 
         data_noise       = self.noise
         self.noise       = self.noise.reshape(self.__nch,1)
@@ -1748,31 +1806,48 @@ class PulsePair_vRF(Operation):
         noise_buffer     = self.noise.reshape(self.__nch,1,self.__nHeis)
         noise_buffer     = numpy.tile(noise_buffer,[1,self.__nProf,1])
 
-
         #------------------ Potencia recibida= P , Potencia senal = S , Ruido= N--
         #------------------   P= S+N  ,P=lag_0/N ---------------------------------
         #-------------------- Power --------------------------------------------------
         data_power         = numpy.nanmean(pair0,axis=1)/(self.nCohInt*pwcode)
+        # data_power         = numpy.nanmean(pair0_norm,axis=1)/(self.nCohInt)
         #--------------------CCF------------------------------------------------------
         if len(self.__buffer)>1:
             data_ccf          =numpy.nanmean(cspc_pair01,axis=0)/(numpy.sqrt(numpy.nanmean(pair0[0],axis=0)*numpy.nanmean(pair0[1],axis=0)))
         else:
             data_ccf = 0
         #------------------  Senal  --------------------------------------------------
+        
+        # data_intensity  = (pair0_norm - noise_buffer)/(self.nCohInt)
         data_intensity  = (pair0-noise_buffer*self.nCohInt)/(self.nCohInt*pwcode)
         data_intensity   = numpy.nanmean(data_intensity,axis=1)
 
         #----------------- Calculo de Frecuencia y Velocidad doppler--------
         pair1            = self.__buffer[:,:-1,:]*numpy.conjugate(self.__buffer[:,1:,:])
+        
+        
+
+        # pair0       = self.__buffer*numpy.conj(self.__buffer)#* 10.0
+
+        ####
+        pwcode_buffer_lag1 = pwcode_buffer[:, :-1, :]
+        pair1_norm = pair1 / pwcode_buffer_lag1
+        
+        # print(numpy.nanmedian(numpy.abs(pair1)))
+        # print(numpy.nanmedian(numpy.abs(pair1_norm)))
+        # pair1_norm = pair1 / pwcode_buffer
+
+        # lag_1            = numpy.sum(pair1,1)
         lag_1            = numpy.sum(pair1,1)
         data_freq        = (-1/(2.0*math.pi*self.ippSec*self.nCohInt))*numpy.angle(lag_1)
         data_velocity    = (self.lambda_/2.0)*data_freq
 
         #---------------- Potencia promedio estimada de la Senal-----------
         lag_0            = data_power
-        S                = lag_0-self.noise
+        S                = lag_0-self.noise/self.nCohInt
         #---------------- Frecuencia Doppler promedio ---------------------
         lag_1            = lag_1/((self.n-1)*pwcode*self.nCohInt)
+        # lag_1            = lag_1/((self.n-1)*self.nCohInt)
         R1               = numpy.abs(lag_1)
 
         #---------------- Calculo del SNR----------------------------------

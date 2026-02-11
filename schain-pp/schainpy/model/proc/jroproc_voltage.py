@@ -244,6 +244,7 @@ class selectHeights(Operation):
 
             # Spectra
             data_spc = self.dataOut.data_spc[:, :, minIndex:maxIndex + 1]
+            # Spectra
 
             data_cspc = None
             if self.dataOut.data_cspc is not None:
@@ -775,41 +776,40 @@ class Decoder(Operation):
         for i in range(self.__nChannels):
                 
                 # self.datadecTime[i] = signal.correlate(data[i], self.code, mode='full')[:self.__nProfiles,self.nBaud-1:]
-                #print(self.code.shape)
+                # print(self.code.shape)
                 
                 # print(len(code_2))
                 # print(type(code_2))
                 
                 # code_2 = numpy.array(code_2).reshape(1, -1)
                 
-                #print(code_2.shape)
+                # print(code_2.shape)
 
                 # print(self.code.shape)
                 # print(self.datadecTime.shape)
                 # (2, 500, 2000)
                 
-                
-                
                 corr_2 = signal.correlate(data[i], numpy.array(code_2).reshape(1, -1), mode='full')[:self.__nProfiles,len(code_2)-1:]
                 
+                
                 # Agregamos nuevo revisar si sale mal: ojo con el slicing cambio en nBaud por len(code_x)
-                corr_1 = signal.correlate(data[i], numpy.array(code_1).reshape(1, -1), mode='full')[:self.__nProfiles,len(code_1)-1:]
+                # corr_1 = signal.correlate(data[i], numpy.array(code_1).reshape(1, -1), mode='full')[:self.__nProfiles,len(code_1)-1:]
                 # print("shape data")
                 # print(data[i].shape)
                 # print(len(data[i,0,:]))
-                d = -int(DC_1*len(data[i,0,:])/100)
+                # d = -int(DC_1*len(data[i,0,:])/100)
                 
-                corr_2 = numpy.roll(corr_2, shift=d, axis=1)
+                # corr_2 = numpy.roll(corr_2, shift=d, axis=1)
                 
-                range_km = 60
-                r = int((RMIX + -(H0))*len(data[i,0,:])/range_km)
+                # range_km = 60
+                # r = int((RMIX + -(H0))*len(data[i,0,:])/range_km)
                 
                 # print(corr_2.shape)
                 # print(corr_1.shape)
                 
                 # self.datadecTime[i] = numpy.concatenate((corr_2[:r], corr_1[r:]))
                 
-                self.datadecTime[i] = numpy.concatenate((corr_2[:, :r], corr_1[:, r:]), axis=1)
+                # self.datadecTime[i] = numpy.concatenate((corr_2[:, :r], corr_1[:, r:]), axis=1)
                 
                 # print(self.datadecTime[i].shape)
                 
@@ -824,7 +824,8 @@ class Decoder(Operation):
                 
                 
                 
-                # self.datadecTime[i] = corr_2
+                self.datadecTime[i] = corr_2
+                # self.datadecTime[i] = corr_1
                 
                 
                 #####################################################################3
@@ -847,7 +848,7 @@ class Decoder(Operation):
         return self.datadecTime'''
                 
 
-                #for i in range(self.__nChannels):
+                # for i in range(self.__nChannels):
             
 
                 # print(len(corr_1))
@@ -867,8 +868,6 @@ class Decoder(Operation):
                 # self.datadecTime[i,j,:] = numpy.correlate(data[i,j,:], code_2, mode='full')[self.nBaud-1:]
                 # self.datadecTime[i,j,:] = numpy.correlate(data[i,j,:], code_block[j,:], mode='full')[self.nBaud-1:]
                 # print(self.datadecTime.shape)
-
-
 
                 # print(len(self.datadecTime[i,j,:]))
                 # d = -int(DC_1*len(data[i,j,:])/100)
@@ -940,6 +939,7 @@ class Decoder(Operation):
 
             if mode == 0:
                 datadec = self.__convolutionByBlockInTime(dataOut.data, code_1, code_2, DC_1, H0, RMIX)
+                print(dataOut.code.shape)
             if mode == 1:
                 datadec = self.__convolutionByBlockInFreq(dataOut.data)
         else:
@@ -1735,36 +1735,65 @@ class PulsePair_vRF(Operation):
             # Cambio CHIRP
             pwcode = numpy.sum(numpy.abs(dataOut.code[0])**2)
             # pwcode = numpy.sum(dataOut.code[0]**2)
+            
+            
+        
+        pwcode_bins = numpy.zeros(len(self.__buffer[0,0,:]))
+        pwcode_bins[:] = pwcode
+        
+        pwcode_buffer = pwcode_bins.reshape(1, 1, len(self.__buffer[0,0,:]))
+        pwcode_buffer = numpy.tile(pwcode_buffer,[self.__nch, self.__nProf, 1])
+        # print(pwcode_buffer.shape)
+        
+        pair0_norm = pair0/pwcode_buffer
+        
+        
         #------------------Calculo de Ruido x canal--------------------
         self.noise  = numpy.zeros(self.__nch)
 
         for i in range(self.__nch):
-            daux         = numpy.sort(pair0[i,:,:],axis= None)
-            self.noise[i]=hildebrand_sekhon( daux/pwcode,self.nCohInt)
+            daux         = numpy.sort(pair0_norm[i,:,:],axis= None)
+            self.noise[i]=hildebrand_sekhon(daux,self.nCohInt)
 
+        
         data_noise       = self.noise
         self.noise       = self.noise.reshape(self.__nch,1)
         self.noise       = numpy.tile(self.noise,[1,self.__nHeis])
         noise_buffer     = self.noise.reshape(self.__nch,1,self.__nHeis)
         noise_buffer     = numpy.tile(noise_buffer,[1,self.__nProf,1])
+        
+        noise_buffer_norm = noise_buffer/pwcode_buffer 
+        # print(noise_buffer_norm.shape)
+        
+        # print(noise_buffer.shape) # (2,500,2000)
 
 
         #------------------ Potencia recibida= P , Potencia senal = S , Ruido= N--
         #------------------   P= S+N  ,P=lag_0/N ---------------------------------
         #-------------------- Power --------------------------------------------------
-        data_power         = numpy.nanmean(pair0,axis=1)/(self.nCohInt*pwcode)
+        data_power         = numpy.nanmean(pair0_norm,axis=1)/(self.nCohInt)
         #--------------------CCF------------------------------------------------------
         if len(self.__buffer)>1:
             data_ccf          =numpy.nanmean(cspc_pair01,axis=0)/(numpy.sqrt(numpy.nanmean(pair0[0],axis=0)*numpy.nanmean(pair0[1],axis=0)))
         else:
             data_ccf = 0
         #------------------  Senal  --------------------------------------------------
-        data_intensity  = (pair0-noise_buffer*self.nCohInt)/(self.nCohInt*pwcode)
+        data_intensity  = (pair0_norm-noise_buffer_norm*self.nCohInt)/(self.nCohInt)
         data_intensity   = numpy.nanmean(data_intensity,axis=1)
 
         #----------------- Calculo de Frecuencia y Velocidad doppler--------
+           
+        
+        # print(pair1.shape)
+        pwcode_buffer_pair1 = pwcode_buffer[:, :-1, :]
+        # print(pwcode_buffer_pair1.shape) # (2,500,2000)
+        
+        
         pair1            = self.__buffer[:,:-1,:]*numpy.conjugate(self.__buffer[:,1:,:])
-        lag_1            = numpy.sum(pair1,1)
+        
+        pair1_norm = pair1/pwcode_buffer_pair1
+        
+        lag_1            = numpy.sum(pair1_norm,1)
         data_freq        = (-1/(2.0*math.pi*self.ippSec*self.nCohInt))*numpy.angle(lag_1)
         data_velocity    = (self.lambda_/2.0)*data_freq
 
@@ -1772,7 +1801,7 @@ class PulsePair_vRF(Operation):
         lag_0            = data_power
         S                = lag_0-self.noise
         #---------------- Frecuencia Doppler promedio ---------------------
-        lag_1            = lag_1/((self.n-1)*pwcode*self.nCohInt)
+        lag_1            = lag_1/((self.n-1)*self.nCohInt)
         R1               = numpy.abs(lag_1)
 
         #---------------- Calculo del SNR----------------------------------
@@ -1782,7 +1811,6 @@ class PulsePair_vRF(Operation):
             for j in range(self.__nHeis):
                 if data_snrPP[i][j]  < 1.e-20:
                     data_snrPP[i][j] = 1.e-20
-
         '''
         data_snrPP[data_snrPP<1.e-20] = 1.e-20
         #----------------- Calculo del ancho espectral ----------------------
