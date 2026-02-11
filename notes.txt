@@ -9,3 +9,7 @@
 - First review some code lines of jroproc_voltage.py in schain-pp 
 - Short pulse diplacement (both cases):
 	MASK = 0.1
+
+11/02/26
+
+- Test with normalization init

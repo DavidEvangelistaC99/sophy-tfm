@@ -797,9 +797,9 @@ class Decoder(Operation):
                 # print("shape data")
                 # print(data[i].shape)
                 # print(len(data[i,0,:]))
-                # d = -int(DC_1*len(data[i,0,:])/100)
+                d = -int(DC_1*len(data[i,0,:])/100)
                 
-                # corr_2 = numpy.roll(corr_2, shift=d, axis=1)
+                corr_2 = numpy.roll(corr_2, shift=d, axis=1)
                 
                 # range_km = 60
                 # r = int((RMIX + -(H0))*len(data[i,0,:])/range_km)
