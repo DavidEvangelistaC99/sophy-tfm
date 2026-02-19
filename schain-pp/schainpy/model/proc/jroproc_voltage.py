@@ -791,9 +791,12 @@ class Decoder(Operation):
                 
                 corr_2 = signal.correlate(data[i], numpy.array(code_2).reshape(1, -1), mode='full')[:self.__nProfiles,len(code_2)-1:]
                 
+                print(corr_2.shape)
+                print(data[i,0,:].shape)
+                
                 
                 # Agregamos nuevo revisar si sale mal: ojo con el slicing cambio en nBaud por len(code_x)
-                # corr_1 = signal.correlate(data[i], numpy.array(code_1).reshape(1, -1), mode='full')[:self.__nProfiles,len(code_1)-1:]
+                corr_1 = signal.correlate(data[i], numpy.array(code_1).reshape(1, -1), mode='full')[:self.__nProfiles,len(code_1)-1:]
                 # print("shape data")
                 # print(data[i].shape)
                 # print(len(data[i,0,:]))
@@ -801,15 +804,17 @@ class Decoder(Operation):
                 
                 corr_2 = numpy.roll(corr_2, shift=d, axis=1)
                 
-                # range_km = 60
-                # r = int((RMIX + -(H0))*len(data[i,0,:])/range_km)
+                
+                ########################################################
+                range_km = 60
+                r = int((RMIX + -(H0))*len(data[i,0,:])/range_km)
                 
                 # print(corr_2.shape)
                 # print(corr_1.shape)
                 
                 # self.datadecTime[i] = numpy.concatenate((corr_2[:r], corr_1[r:]))
                 
-                # self.datadecTime[i] = numpy.concatenate((corr_2[:, :r], corr_1[:, r:]), axis=1)
+                self.datadecTime[i] = numpy.concatenate((corr_2[:, :r], corr_1[:, r:]), axis=1)
                 
                 # print(self.datadecTime[i].shape)
                 
@@ -823,8 +828,8 @@ class Decoder(Operation):
                 
                 
                 
-                
-                self.datadecTime[i] = corr_2
+                ##############################
+                # self.datadecTime[i] = corr_2
                 # self.datadecTime[i] = corr_1
                 
                 
@@ -1730,16 +1735,28 @@ class PulsePair_vRF(Operation):
         if len(self.__buffer)>1:
             cspc_pair01 = self.__buffer[0]*numpy.conjugate(self.__buffer[1])
         #------------------  Data Decodificada------------------------
+        
+        RMIX = 5.8
+        H0   = -1.75
+        range_km = 60
+        r = int((RMIX + -(H0))*len(self.__buffer[0,0,:])/range_km)
+                
         pwcode =  1
         if dataOut.flagDecodeData == True:
             # Cambio CHIRP
-            pwcode = numpy.sum(numpy.abs(dataOut.code[0])**2)
+            # pwcode = numpy.sum(numpy.abs(dataOut.code[0])**2)
+            
+            pwcode_1 = numpy.sum(numpy.abs(dataOut.code[0][:200])**2)
+            pwcode_2 = numpy.sum(numpy.abs(dataOut.code[0][200:220])**2)
             # pwcode = numpy.sum(dataOut.code[0]**2)
             
             
         
         pwcode_bins = numpy.zeros(len(self.__buffer[0,0,:]))
-        pwcode_bins[:] = pwcode
+        
+        pwcode_bins[:r] = pwcode_1
+        pwcode_bins[r:] = pwcode_2
+        # pwcode_bins[:] = pwcode
         
         pwcode_buffer = pwcode_bins.reshape(1, 1, len(self.__buffer[0,0,:]))
         pwcode_buffer = numpy.tile(pwcode_buffer,[self.__nch, self.__nProf, 1])
@@ -1752,7 +1769,13 @@ class PulsePair_vRF(Operation):
         self.noise  = numpy.zeros(self.__nch)
 
         for i in range(self.__nch):
-            daux         = numpy.sort(pair0_norm[i,:,:],axis= None)
+            
+            #daux_1 = numpy.sort(pair0_norm[i,:,:r])
+            #daux_2 = numpy.sort(pair_0_norm[i,:,r:])
+            
+            #noise_1 = hildebrand_sekhon(daux_1,self.nCohInt)
+            #noise_2 = hildebrand_sekhon(daux_2,self.nCohInt)
+            daux         = numpy.sort(pair0_norm[i,:,:r],axis= None)
             self.noise[i]=hildebrand_sekhon(daux,self.nCohInt)
 
         
