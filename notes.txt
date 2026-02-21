@@ -13,3 +13,7 @@
 11/02/26
 
 - Test with normalization init
+
+21/02/26
+
+- MSI PC
