@@ -1,5 +1,13 @@
 # Time-Frequency Multiplexed waveform for Weather Radar SOPHy
 
+<p align="center">
+  <img src="images/IMAGE_2025-03-04.jpeg" width="900">
+</p>
+
+<p align="center">
+  <em>SOPHy weather radar located at the Sicaya Observatory (Huancayo, Peru).</em>
+</p>
+
 ## Overview
 This repository contains the development of Time-Frequency Multiplexed (TFM) waveforms for blind range mitigation in the SOPHy weather radar. This work continues previous research on pulse compression based on chirp modulation techniques.
  
