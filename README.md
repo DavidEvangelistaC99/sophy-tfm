@@ -9,7 +9,7 @@
 </p>
 
 ## Overview
-This repository contains the development of Time-Frequency Multiplexed (TFM) waveforms for blind range mitigation in the SOPHy weather radar. This work continues previous research on pulse compression based on chirp modulation techniques.
+This repository contains the development of Time-Frequency Multiplexed (TFM) waveforms for blind range mitigation in the SOPHy weather radar. This work continues previous research on pulse compression based on chirp modulation technique.
  
 ## Methods
 - Development of TFM waveforms
