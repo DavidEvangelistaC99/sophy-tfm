@@ -8,9 +8,8 @@ import time
 
 import matplotlib.pyplot as plt
 
-#PATH = '/home/david/Documents/DATA_2/'
+# PATH = '/home/david/Documents/DATA_2/'
 PATH = '/home/david/Documentos/DATA/'
-# PATH = "/media/jespinoza/data2/SOPHY/"
 
 # SNR ZMIN -40 A ZMAX -20
 PARAM = {
@@ -81,7 +80,7 @@ def main(args):
 
     # SE TIENE QUE CONFIGURAR, IMPORTANTE!!!
     if conf['usrp_tx']['code_type_1'] == 'CHIRP':
-        RMIX = 5.8 #5.45     #2.4 # Para chirp de 12 1: 5.45 #2.4  # 4.8          #5.8  #4.8#5.68#4.8#4.8#2.64#10#2.64
+        RMIX = 6.0 #5.8 #5.45     #2.4 # Para chirp de 12 1: 5.45 #2.4  # 4.8          #5.8  #4.8#5.68#4.8#4.8#2.64#10#2.64
         H0   = -1.75    #-1.33#-1.68 #.68 #-2.0         #-1.68        #-1.68# -1.2#-1.68#-1.2#0.5#-1.2
     else:
         RMIX = 4.8  # 4.8          #5.8  #4.8#5.68#4.8#4.8#2.64#10#2.64

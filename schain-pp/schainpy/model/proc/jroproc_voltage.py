@@ -1736,7 +1736,7 @@ class PulsePair_vRF(Operation):
             cspc_pair01 = self.__buffer[0]*numpy.conjugate(self.__buffer[1])
         #------------------  Data Decodificada------------------------
         
-        RMIX = 5.8
+        RMIX = 6.0
         H0   = -1.75
         range_km = 60
         r = int((RMIX + -(H0))*len(self.__buffer[0,0,:])/range_km)
@@ -1748,22 +1748,17 @@ class PulsePair_vRF(Operation):
             
             pwcode_1 = numpy.sum(numpy.abs(dataOut.code[0][:200])**2)
             pwcode_2 = numpy.sum(numpy.abs(dataOut.code[0][200:220])**2)
-            # pwcode = numpy.sum(dataOut.code[0]**2)
             
-            
-        
         pwcode_bins = numpy.zeros(len(self.__buffer[0,0,:]))
         
+        # pwcode_bins[:] = pwcode
         pwcode_bins[:r] = pwcode_1
         pwcode_bins[r:] = pwcode_2
-        # pwcode_bins[:] = pwcode
         
         pwcode_buffer = pwcode_bins.reshape(1, 1, len(self.__buffer[0,0,:]))
         pwcode_buffer = numpy.tile(pwcode_buffer,[self.__nch, self.__nProf, 1])
-        # print(pwcode_buffer.shape)
         
         pair0_norm = pair0/pwcode_buffer
-        
         
         #------------------Calculo de Ruido x canal--------------------
         self.noise  = numpy.zeros(self.__nch)
@@ -1771,15 +1766,10 @@ class PulsePair_vRF(Operation):
         noise_2 = numpy.zeros(self.__nch)
 
         for i in range(self.__nch):
-            
-            #daux_1 = numpy.sort(pair0_norm[i,:,:r])
-            #daux_2 = numpy.sort(pair_0_norm[i,:,r:])
-            
-            #noise_1 = hildebrand_sekhon(daux_1,self.nCohInt)
-            #noise_2 = hildebrand_sekhon(daux_2,self.nCohInt)
-            daux         = numpy.sort(pair0_norm[i,:,:r],axis= None)
-            daux_2         = numpy.sort(pair0_norm[i,:,r:],axis= None)
-            self.noise[i]=hildebrand_sekhon(daux,self.nCohInt)
+
+            daux_1  = numpy.sort(pair0_norm[i,:,:r],axis= None)
+            daux_2  = numpy.sort(pair0_norm[i,:,r:],axis= None)
+            self.noise[i]   =   hildebrand_sekhon(daux_1,self.nCohInt)
             noise_1[i] = self.noise[i]
             noise_2[i] = hildebrand_sekhon(daux_2,self.nCohInt)
 
@@ -1789,33 +1779,15 @@ class PulsePair_vRF(Operation):
         noise_1 = noise_1.reshape(self.__nch,1)
         noise_2 = noise_2.reshape(self.__nch,1)
 
-        noise_1__      = numpy.tile(noise_1,[1,self.__nHeis])
-        noise_2__ = numpy.tile(noise_2,[1,self.__nHeis])
-        print(noise_1__.shape)
-
-        self.noise       = numpy.tile(self.noise,[1,self.__nHeis])
-        noise_1      = numpy.tile(noise_1,[1,r])#self.__nHeis])
+        self.noise  = numpy.tile(self.noise,[1,self.__nHeis])
+        noise_1 = numpy.tile(noise_1,[1,r])
         noise_2 = numpy.tile(noise_2, [1,self.__nHeis - r])
 
-        
-
         noise_full = numpy.concatenate((noise_1,noise_2),axis=1)
-
         noise_buffer = noise_full.reshape(self.__nch, 1, self.__nHeis)
         noise_buffer = numpy.tile(noise_buffer, [1, self.__nProf, 1])
 
-        
-
-        # noise_buffer     = self.noise.reshape(self.__nch,1,self.__nHeis)
-        # noise_buffer     = numpy.tile(noise_buffer,[1,self.__nProf,1])
-
-        print(noise_buffer.shape)
-        
-        noise_buffer_norm = noise_buffer/pwcode_buffer 
-        # print(noise_buffer_norm.shape)
-        
-        # print(noise_buffer.shape) # (2,500,2000)
-
+        noise_buffer_norm = noise_buffer/pwcode_buffer
 
         #------------------ Potencia recibida= P , Potencia senal = S , Ruido= N--
         #------------------   P= S+N  ,P=lag_0/N ---------------------------------
@@ -1831,13 +1803,8 @@ class PulsePair_vRF(Operation):
         data_intensity   = numpy.nanmean(data_intensity,axis=1)
 
         #----------------- Calculo de Frecuencia y Velocidad doppler--------
-           
-        
-        # print(pair1.shape)
+
         pwcode_buffer_pair1 = pwcode_buffer[:, :-1, :]
-        # print(pwcode_buffer_pair1.shape) # (2,500,2000)
-        
-        
         pair1            = self.__buffer[:,:-1,:]*numpy.conjugate(self.__buffer[:,1:,:])
         
         pair1_norm = pair1/pwcode_buffer_pair1
@@ -1848,35 +1815,21 @@ class PulsePair_vRF(Operation):
 
         #---------------- Potencia promedio estimada de la Senal-----------
         lag_0            = data_power
-        #S                = lag_0-self.noise
         
         S = numpy.empty_like(lag_0)
-
         S[:, :r] = lag_0[:, :r] - noise_1
         S[:, r:] = lag_0[:, r:] - noise_2
 
-        # S = numpy.empty_like(lag_0)
-        # S[:, :r] = lag_0[:, :r] - noise_1[:, None]
-        print(S.shape)
         #---------------- Frecuencia Doppler promedio ---------------------
         lag_1            = lag_1/((self.n-1)*self.nCohInt)
         R1               = numpy.abs(lag_1)
 
         #---------------- Calculo del SNR----------------------------------
-        # data_snrPP       = S/self.noise
 
         data_snrPP = numpy.empty_like(S)
-
         data_snrPP[:, :r] = S[:, :r] / noise_1
         data_snrPP[:, r:] = S[:, r:] / noise_2
 
-        print(data_snrPP.shape)
-        '''
-        for i in range(self.__nch):
-            for j in range(self.__nHeis):
-                if data_snrPP[i][j]  < 1.e-20:
-                    data_snrPP[i][j] = 1.e-20
-        '''
         data_snrPP[data_snrPP<1.e-20] = 1.e-20
         #----------------- Calculo del ancho espectral ----------------------
         L                = S/R1
@@ -1888,11 +1841,7 @@ class PulsePair_vRF(Operation):
 
         self.__buffer    = numpy.zeros((self.__nch, self.__nProf,self.__nHeis),  dtype='complex')
         self.__profIndex = 0
-        #print(data_snrPP)
-        #import matplotlib.pyplot as plt
-        #plt.plot(data_snrPP)
-        #plt.show()
-        #plt.savefig(f"snrPP-{pwcode}-{dataOut.utctime}.png")
+
         return data_power,data_intensity,data_velocity,data_snrPP,data_specwidth,data_ccf,data_noise,n
 
 

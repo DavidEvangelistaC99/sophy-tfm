@@ -586,18 +586,18 @@ class WeatherParamsPlot(Plot):
         if self.mask:
             #---------nuevo procesamiento mask----------------#
             
-            RMIX = 5.8
-            H0   = -1.75
-            range_km = 60
-            r = int((RMIX + -(H0))*2000/range_km)
-            #r = int((RMIX + -(H0))*len(self.__buffer[0,0,:])/range_km)
+            RMIX        = 6.0 #5.8
+            H0          = -1.75
+            range_km    = 60
+            r           = int((RMIX + -(H0))*2000/range_km)
             
-            self.mask1 = 0.1   # Umbral para alturas < index
-            self.mask =  1.5   # Umbral para alturas >= index
+            self.mask1  = 0.01   # Umbral para alturas < index
+            self.mask   = 0.275   # Umbral para alturas >= index
+
             # Crear máscaras por rangos de altura
-            print("SHAPE: ",dataOut.data_param.shape)
             mask1 = (dataOut.data_param[:,3,:] < self.mask1) & (numpy.arange(dataOut.data_param.shape[3])[None, None, :] <  r) #self.index)
             mask  = (dataOut.data_param[:,3,:] < self.mask)  & (numpy.arange(dataOut.data_param.shape[3])[None, None, :] >= r) #self.index)
+            
             # Aplicar filtros
             tmp[mask1] = numpy.nan
             tmp[mask]  = numpy.nan
@@ -607,14 +607,13 @@ class WeatherParamsPlot(Plot):
             #-----------------------original---------------------#
             
             # mask = dataOut.data_param[:,3,:] < self.mask
-            
-            
             # tmp[mask] = numpy.nan
             # mask = numpy.nansum((tmp, numpy.roll(tmp, 1),numpy.roll(tmp, -1)), axis=0) == tmp
             # tmp[mask] = numpy.nan
             
             # numpy.savez("/DATA_RM/DATA/HYO@2025-11-11T00-00-34/data_chirp_0.5_NEW_NEW_NEW.npz", data = dataOut.data_param[:,3,:])
             #------------------------------------------------------#
+
         r = dataOut.heightList
         delta_height = r[1]-r[0]
         valid = numpy.where(r>=0)[0]
