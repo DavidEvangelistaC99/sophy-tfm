@@ -1,8 +1,19 @@
+# Time-Frequency Multiplexed waveform for Weather Radar SOPHy
+
+## Overview
+This repository contains the development of Time-Frequency Multiplexed (TFM) waveforms for blind range mitigation in the SOPHy weather radar. This work continues previous research on pulse compression based on chirp modulation techniques.
+
+## 
+## Methods
+- Development of TFM waveform
+- Doppler spectrum analysis
+- Pulse Pair processing
+- Generation of PPI products: SNR results
+
 ## Repository Structure
 - `results/`: Doppler spectra and PPI plots
 - `schain-spectra/`: library used to analyze spectra by profiles
 - `schain-pp/`: library used to analyze Pulse Pair algorithm by profiles
-
 
 ## Requirements 
 
@@ -18,3 +29,7 @@
   - fuzzywuzzy 0.18.0
   - pycparser 2.22
   - scipy 1.8.0
+
+## Author
+**David Fernando Evangelista Cuti**
+B. Sc. in Electronic Engineering - National University of Engineering (UNI), Peru
