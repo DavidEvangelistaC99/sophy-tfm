@@ -217,7 +217,7 @@ if __name__ == "__main__":
   fc_2 = 1.625e6
   bw_1 = 1.0e6
   bw_2 = 0.25e6
-  td_ = 0.0
+  td_ = 5.2
   window_1 = 'B'
   window_2 = 'R',
   mode_f_ = 0
@@ -251,7 +251,18 @@ if __name__ == "__main__":
                                   window_1, 
                                   window_2)
     
-  t = [i*(400)/(len(full_chirp_1)) for i in range(len(full_chirp_1))] 
-  plt.plot(t, np.real(full_chirp_1)) 
-  plt.plot(t, np.imag(full_chirp_1)) 
+  t = [i*(400)/(len(full_chirp_1)) for i in range(len(full_chirp_1[:300]))] 
+  # plt.plot(t, np.real(full_chirp_1)) 
+  # plt.plot(t, np.imag(full_chirp_1)) 
+  plt.plot(t,np.real(full_chirp_1[:300]), label="Real")
+  plt.plot(t,np.imag(full_chirp_1[:300]), label="Imag")
+  plt.grid(
+          True,
+          linestyle='--',   # líneas punteadas
+          linewidth=0.5,    # más delgadas
+          alpha=0.7         # un poco transparentes
+          )
+  plt.legend()
+  plt.xlabel("Time (us)", fontweight='bold')
+  plt.ylabel("Amplitude ", fontweight='bold')
   plt.show()
