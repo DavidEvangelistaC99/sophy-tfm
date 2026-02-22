@@ -8,8 +8,8 @@ import time
 
 import matplotlib.pyplot as plt
 
-PATH = '/home/david/Documents/DATA_2/'
-# PATH = '/home/david/Documents/DATA/'
+#PATH = '/home/david/Documents/DATA_2/'
+PATH = '/home/david/Documentos/DATA/'
 # PATH = "/media/jespinoza/data2/SOPHY/"
 
 # SNR ZMIN -40 A ZMAX -20

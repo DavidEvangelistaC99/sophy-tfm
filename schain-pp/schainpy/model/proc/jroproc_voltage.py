@@ -791,8 +791,8 @@ class Decoder(Operation):
                 
                 corr_2 = signal.correlate(data[i], numpy.array(code_2).reshape(1, -1), mode='full')[:self.__nProfiles,len(code_2)-1:]
                 
-                print(corr_2.shape)
-                print(data[i,0,:].shape)
+                # print(corr_2.shape)
+                # print(data[i,0,:].shape)
                 
                 
                 # Agregamos nuevo revisar si sale mal: ojo con el slicing cambio en nBaud por len(code_x)
@@ -944,7 +944,7 @@ class Decoder(Operation):
 
             if mode == 0:
                 datadec = self.__convolutionByBlockInTime(dataOut.data, code_1, code_2, DC_1, H0, RMIX)
-                print(dataOut.code.shape)
+                # print(dataOut.code.shape)
             if mode == 1:
                 datadec = self.__convolutionByBlockInFreq(dataOut.data)
         else:
@@ -1767,6 +1767,8 @@ class PulsePair_vRF(Operation):
         
         #------------------Calculo de Ruido x canal--------------------
         self.noise  = numpy.zeros(self.__nch)
+        noise_1 = numpy.zeros(self.__nch)
+        noise_2 = numpy.zeros(self.__nch)
 
         for i in range(self.__nch):
             
@@ -1776,14 +1778,38 @@ class PulsePair_vRF(Operation):
             #noise_1 = hildebrand_sekhon(daux_1,self.nCohInt)
             #noise_2 = hildebrand_sekhon(daux_2,self.nCohInt)
             daux         = numpy.sort(pair0_norm[i,:,:r],axis= None)
+            daux_2         = numpy.sort(pair0_norm[i,:,r:],axis= None)
             self.noise[i]=hildebrand_sekhon(daux,self.nCohInt)
+            noise_1[i] = self.noise[i]
+            noise_2[i] = hildebrand_sekhon(daux_2,self.nCohInt)
 
         
         data_noise       = self.noise
         self.noise       = self.noise.reshape(self.__nch,1)
+        noise_1 = noise_1.reshape(self.__nch,1)
+        noise_2 = noise_2.reshape(self.__nch,1)
+
+        noise_1__      = numpy.tile(noise_1,[1,self.__nHeis])
+        noise_2__ = numpy.tile(noise_2,[1,self.__nHeis])
+        print(noise_1__.shape)
+
         self.noise       = numpy.tile(self.noise,[1,self.__nHeis])
-        noise_buffer     = self.noise.reshape(self.__nch,1,self.__nHeis)
-        noise_buffer     = numpy.tile(noise_buffer,[1,self.__nProf,1])
+        noise_1      = numpy.tile(noise_1,[1,r])#self.__nHeis])
+        noise_2 = numpy.tile(noise_2, [1,self.__nHeis - r])
+
+        
+
+        noise_full = numpy.concatenate((noise_1,noise_2),axis=1)
+
+        noise_buffer = noise_full.reshape(self.__nch, 1, self.__nHeis)
+        noise_buffer = numpy.tile(noise_buffer, [1, self.__nProf, 1])
+
+        
+
+        # noise_buffer     = self.noise.reshape(self.__nch,1,self.__nHeis)
+        # noise_buffer     = numpy.tile(noise_buffer,[1,self.__nProf,1])
+
+        print(noise_buffer.shape)
         
         noise_buffer_norm = noise_buffer/pwcode_buffer 
         # print(noise_buffer_norm.shape)
@@ -1822,13 +1848,29 @@ class PulsePair_vRF(Operation):
 
         #---------------- Potencia promedio estimada de la Senal-----------
         lag_0            = data_power
-        S                = lag_0-self.noise
+        #S                = lag_0-self.noise
+        
+        S = numpy.empty_like(lag_0)
+
+        S[:, :r] = lag_0[:, :r] - noise_1
+        S[:, r:] = lag_0[:, r:] - noise_2
+
+        # S = numpy.empty_like(lag_0)
+        # S[:, :r] = lag_0[:, :r] - noise_1[:, None]
+        print(S.shape)
         #---------------- Frecuencia Doppler promedio ---------------------
         lag_1            = lag_1/((self.n-1)*self.nCohInt)
         R1               = numpy.abs(lag_1)
 
         #---------------- Calculo del SNR----------------------------------
-        data_snrPP       = S/self.noise
+        # data_snrPP       = S/self.noise
+
+        data_snrPP = numpy.empty_like(S)
+
+        data_snrPP[:, :r] = S[:, :r] / noise_1
+        data_snrPP[:, r:] = S[:, r:] / noise_2
+
+        print(data_snrPP.shape)
         '''
         for i in range(self.__nch):
             for j in range(self.__nHeis):

@@ -1,0 +1,21 @@
+{
+    "Raw File Name": "administrativeboundarieslevel2.zip", 
+    "Group": "Peru", 
+    "License": "Creative Commons Attribution for Intergovernmental Organizations", 
+    "country": "Peru", 
+    "Unnamed: 11": null, 
+    "Processed File Name": "PER_ADM2.zip", 
+    "timestamp": 1534539072, 
+    "Known Errors": "Small island off of Callao isn't included in this layer, missing one province", 
+    "datetime": "2018-08-17 16:51:12", 
+    "version": "1_3_3", 
+    "Unnamed: 12": null, 
+    "Source 2": "United Nations Office for the Coordination of Humanitarian Affairs Regional Office for Latin America and the Caribbean (ROLAC)", 
+    "Source 1": "Instituto Geogr\u00e1fico Nacional - IGN", 
+    "Year": 2009, 
+    "iso": "PER", 
+    "adm": "ADM2", 
+    "Changes": "No", 
+    "Link to Source Data": "https://data.humdata.org/dataset/limites-de-peru", 
+    "Boundary Level": "ADM 2"
+}
