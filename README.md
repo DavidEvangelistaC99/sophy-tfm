@@ -2,13 +2,32 @@
 
 ## Overview
 This repository contains the development of Time-Frequency Multiplexed (TFM) waveforms for blind range mitigation in the SOPHy weather radar. This work continues previous research on pulse compression based on chirp modulation techniques.
-
-## 
+ 
 ## Methods
 - Development of TFM waveform
 - Doppler spectrum analysis
 - Pulse Pair processing
 - Generation of PPI products: SNR results
+
+## Results
+The results presented in this section correspond to the processing of the TFM waveform, using echoes from mountains in nearby regions as a reference to verify blind range mitigation.
+
+<p align="center">
+  <img src="results/processing/RESULT_TFM_SPECTRA.png" width="900">
+</p>
+
+<p align="center">
+  <em>Spectra processing applied to matched filtering and waveform demultiplexing.</em>
+</p>
+
+
+<p align="center">
+  <img src="results/processing/RESULT_TFM_PP.png" width="900">
+</p>
+
+<p align="center">
+  <em>SNR at a 1.0° elevation angle using TFM waveform..</em>
+</p>
 
 ## Repository Structure
 - `results/`: Doppler spectra and PPI plots
@@ -31,5 +50,5 @@ This repository contains the development of Time-Frequency Multiplexed (TFM) wav
   - scipy 1.8.0
 
 ## Author
-**David Fernando Evangelista Cuti**
+**David Fernando Evangelista Cuti**<br>
 B. Sc. in Electronic Engineering - National University of Engineering (UNI), Peru
