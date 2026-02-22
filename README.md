@@ -12,7 +12,7 @@
 This repository contains the development of Time-Frequency Multiplexed (TFM) waveforms for blind range mitigation in the SOPHy weather radar. This work continues previous research on pulse compression based on chirp modulation techniques.
  
 ## Methods
-- Development of TFM waveform
+- Development of TFM waveforms
 - Doppler spectrum analysis
 - Pulse Pair processing
 - Generation of PPI products: SNR results
@@ -28,6 +28,7 @@ The results presented in this section correspond to the processing of the TFM wa
   <em>Spectra processing applied to matched filtering and waveform demultiplexing.</em>
 </p>
 
+<br>
 
 <p align="center">
   <img src="results/processing/RESULT_TFM_PP.png" width="900">
