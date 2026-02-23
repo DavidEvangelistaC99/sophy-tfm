@@ -35,7 +35,7 @@ The results presented in this section correspond to the processing of the TFM wa
 </p>
 
 <p align="center">
-  <em>SNR at a 1.0° elevation angle using TFM waveform..</em>
+  <em>SNR at a 1.0° elevation angle using TFM waveform.</em>
 </p>
 
 ## Repository Structure
