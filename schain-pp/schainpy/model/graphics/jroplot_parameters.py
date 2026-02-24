@@ -591,8 +591,8 @@ class WeatherParamsPlot(Plot):
             range_km    = 60
             r           = int((RMIX + -(H0))*2000/range_km)
             
-            self.mask1  = 0.01   # Umbral para alturas < index
-            self.mask   = 0.275   # Umbral para alturas >= index
+            self.mask1  = 0.1   # Umbral para alturas < index
+            self.mask   = 0.25   # Umbral para alturas >= index
 
             # Crear máscaras por rangos de altura
             mask1 = (dataOut.data_param[:,3,:] < self.mask1) & (numpy.arange(dataOut.data_param.shape[3])[None, None, :] <  r) #self.index)

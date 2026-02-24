@@ -256,7 +256,7 @@ def main(args):
             if args.save: op.addParameter(name='save', value=path_plots, format='str')
             op.addParameter(name='save_period', value=-1)
             op.addParameter(name='show', value=args.show)
-            op.addParameter(name='channels', value='0,')
+            op.addParameter(name='channels', value='1,')
             op.addParameter(name='zmin', value=PARAM[param]['zmin'])
             op.addParameter(name='zmax', value=PARAM[param]['zmax'])
             op.addParameter(name='yrange', value=0.15, format='float')# esto estaba en 20
@@ -551,7 +551,7 @@ def main(args):
                 op.addParameter(name='save_period', value=-1)
                 op.addParameter(name='show', value=args.show)
                 # op.addParameter(name='channels', value='0,1')
-                op.addParameter(name='channels', value='0,')
+                op.addParameter(name='channels', value='1,')
                 op.addParameter(name='zmin', value=PARAM[param]['zmin'], format='int')
                 op.addParameter(name='zmax', value=PARAM[param]['zmax'], format='int')
                 op.addParameter(name='yrange', value=20, format='int')

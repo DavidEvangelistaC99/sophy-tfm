@@ -775,19 +775,19 @@ class Decoder(Operation):
 
         for i in range(self.__nChannels):
                 
-                t = [i/5 for i in range(len(data[i][0][:300]))]
-                plt.plot(t,numpy.real(data[i][0][:300]), label="Real")
-                plt.plot(t,numpy.imag(data[i][0][:300]), label="Imag")
-                plt.grid(
-                        True,
-                        linestyle='--',   # líneas punteadas
-                        linewidth=0.5,    # más delgadas
-                        alpha=0.7         # un poco transparentes
-                        )
-                plt.legend()
-                plt.xlabel("Time (us)", fontweight='bold')
-                plt.ylabel("Amplitude ", fontweight='bold')
-                plt.show()
+                # t = [i/5 for i in range(len(data[i][0][:300]))]
+                # plt.plot(t,numpy.real(data[i][0][:300]), label="Real")
+                # plt.plot(t,numpy.imag(data[i][0][:300]), label="Imag")
+                # plt.grid(
+                #        True,
+                #        linestyle='--',   # líneas punteadas
+                #        linewidth=0.5,    # más delgadas
+                #        alpha=0.7         # un poco transparentes
+                #        )
+                # plt.legend()
+                # plt.xlabel("Time (us)", fontweight='bold')
+                # plt.ylabel("Amplitude ", fontweight='bold')
+                # plt.show()
                 # self.datadecTime[i] = signal.correlate(data[i], self.code, mode='full')[:self.__nProfiles,self.nBaud-1:]
                 # print(self.code.shape)
                 
