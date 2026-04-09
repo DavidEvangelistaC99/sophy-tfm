@@ -50,7 +50,7 @@ The results presented in this section correspond to the processing of the TFM wa
 
 ## Requirements 
 
-- Python 3.10+
+- Python 3.9
 - digital_rf 2.6.7
 - matplotlib 3.5.1
 - numpy <1.24
@@ -61,7 +61,7 @@ The results presented in this section correspond to the processing of the TFM wa
 - fuzzywuzzy 0.18.0
 - pycparser 2.22
 - scipy 1.8.0
-- **Signal Chain processing library (`schain`) - ROJ**
+- Signal Chain processing library (`schain`) - ROJ
 
 ## Author
 
