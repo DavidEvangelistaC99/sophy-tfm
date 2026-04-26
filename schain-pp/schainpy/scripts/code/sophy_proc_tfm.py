@@ -113,7 +113,8 @@ def main(args):
         nProfileBlocks = N,
     )
 
-    if not conf['usrp_tx']['enable_2']: # One Pulse
+    # Conditional change to TFM experiments 
+    if not conf['usrp_tx']['enable_2'] or (conf['usrp_tx']['enable_2'] and not conf['usrp_tx']['repetitions_2']): # One Pulse
         print("HOLA ES 1 SOLO PULSO")
         n_pulses = 1
 
