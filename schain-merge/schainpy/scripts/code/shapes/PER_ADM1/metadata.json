@@ -1,0 +1,21 @@
+{
+    "Raw File Name": "exported_boundaries_Amazonas.shp (1).zip", 
+    "Group": "Peru", 
+    "License": "ODbL", 
+    "country": "Peru", 
+    "Unnamed: 11": null, 
+    "Processed File Name": "PER_ADM1.zip", 
+    "timestamp": 1534539070, 
+    "Known Errors": "Missing the Lima Province", 
+    "datetime": "2018-08-17 16:51:10", 
+    "version": "1_3_3", 
+    "Unnamed: 12": null, 
+    "Source 2": "Wambacher (https://wambachers-osm.website/boundaries/)", 
+    "Source 1": "OpenStreetMap", 
+    "Year": 2009, 
+    "iso": "PER", 
+    "adm": "ADM1", 
+    "Changes": "No", 
+    "Link to Source Data": null, 
+    "Boundary Level": "ADM 1"
+}
