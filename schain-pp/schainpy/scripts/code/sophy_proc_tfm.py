@@ -94,7 +94,7 @@ def main(args):
     from schainpy.controller import Project
 
     project = Project()
-    project.setup(id='1', name='Sophy', description='sophy proc')
+    project.setup(id='1', name='Sophy', description='sophy proc tfm')
 
     # start_time = '20:10:00'
     # end_time = '20:30:00'

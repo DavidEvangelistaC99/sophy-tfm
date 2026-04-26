@@ -15,6 +15,7 @@ from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext as _build_ext
 from schainpy import __version__
 
+
 DOCLINES = __doc__.split("\n")
 
 gfor = os.popen("gfortran --version").read()
@@ -25,7 +26,8 @@ class build_ext(_build_ext):
     def finalize_options(self):
         _build_ext.finalize_options(self)
         # Prevent numpy from thinking it is still in its setup process:
-        __builtins__.__NUMPY_SETUP__ = False
+        import builtins
+        builtins.__NUMPY_SETUP__ = False
         import numpy
         self.include_dirs.append(numpy.get_include())
 

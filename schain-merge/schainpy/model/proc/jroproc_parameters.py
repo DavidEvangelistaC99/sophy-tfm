@@ -177,6 +177,9 @@ class ParametersProc(ProcessingUnit):
 
             if hasattr(self.dataIn, 'dataPP_WIDTH'):
                 self.dataOut.dataPP_WIDTH = self.dataIn.dataPP_WIDTH
+
+            if hasattr(self.dataIn, 'dataPP_CCF'):
+                self.dataOut.dataPP_CCF = self.dataIn.dataPP_CCF
             return
 
         #----------------------    Spectra Data    ---------------------------
@@ -8166,6 +8169,181 @@ class WeatherRadar(Operation):
             dataOut.data_param[self.mask] = numpy.nan
         return dataOut
 
+class WeatherRadar_2(Operation):
+    '''
+    Function tat implements Weather Radar operations-
+    Input:
+    Output:
+    Parameters affected:
+
+    Conversion Watt
+    Referencia
+    https://www.tek.com/en/blog/calculating-rf-power-iq-samples
+
+    data_param = (nCh, 8, nHeis)
+    S, V, W, SNR, Z, D, P, R
+    Power, Velocity, Spectral width, SNR, Reflectivity, Differential reflectivity, PHI DP, RHO HV
+    '''
+    isConfig  = False
+    variableList = None
+
+    def __init__(self):
+        Operation.__init__(self)
+
+    def setup(self,dataOut,variableList= None,Pt=0,Gt=0,Gr=0,Glna=0,lambda_=0, aL=0,
+                tauW= 0,thetaT=0,thetaR=0,Km =0,CR_Flag=False,min_index=0,sesgoZD=0):
+
+        self.nCh      = dataOut.nChannels
+        self.nHeis    = dataOut.nHeights
+        self.min_index= min_index
+        deltaHeight   = dataOut.heightList[1] - dataOut.heightList[0]
+        #self.Range    = numpy.arange(dataOut.nHeights)*deltaHeight + dataOut.heightList[0]+min_index*deltaHeight
+        self.Range    = dataOut.heightList
+        self.Range    = self.Range.reshape(1,self.nHeis)
+        self.Range    = numpy.tile(self.Range,[self.nCh,1])
+        '''-----------1 Constante del Radar----------'''
+        self.Pt       = Pt # Pmax =200 W x DC=(0.2 useg/400useg)
+        self.Gt       = Gt  # 38 db
+        self.Gr       = Gr  # 38 dB
+        self.Glna     = Glna # 60 dB
+        self.lambda_  = lambda_ # 3.2 cm 0.032 m.
+        self.aL       = aL # Perdidas
+        self.tauW     = tauW #ancho de pulso 0.2useg pulso corto.
+        self.thetaT   = thetaT # 1.8º -- 0.0314 rad
+        self.thetaR   = thetaR # 1.8ª --0.0314 rad
+        self.Km       = Km
+        self.CR_Flag  = CR_Flag
+        self.sesgoZD  = sesgoZD
+        Numerator     = ((4*numpy.pi)**3 * aL**2 * 16 *numpy.log(2)*(10**18))
+        Denominator   = (Pt *(10**(Gt/10.0))*(10**(Gr/10.0))*(10**(Glna/10.0))* lambda_**2 * SPEED_OF_LIGHT * tauW * numpy.pi*thetaT*thetaR)
+        self.RadarConstant = Numerator/Denominator
+        self.variableList  = variableList
+        if self.variableList== None:
+            self.variableList= ['Z','D','R','P']
+
+    def setMoments(self, dataOut):
+        # S, V, W, SNR, Z, D, P, R
+        type  = dataOut.inputUnit
+        nCh   = dataOut.nChannels
+        nHeis = dataOut.nHeights
+        data_param = numpy.zeros((nCh, 8, nHeis))
+        if type == "Voltage":
+            factor            = 1
+            #print("SHAPE:",dataOut.dataPP_POW.shape)
+            data_param[:,0,:] = dataOut.dataPP_POW/(factor)#dataOut.dataPP_POWER/(factor)
+            data_param[:,1,:] = dataOut.dataPP_DOP
+            data_param[:,2,:] = dataOut.dataPP_WIDTH
+            data_param[:,3,:] = dataOut.dataPP_SNR
+        if type == "Spectra":
+            factor = dataOut.normFactor
+            data_param[:,0,:] = dataOut.data_pow/(factor)
+            data_param[:,1,:] = dataOut.data_dop
+            data_param[:,2,:] = dataOut.data_width
+            data_param[:,3,:] = dataOut.data_snr
+        return data_param
+
+    def getCoeficienteCorrelacionROhv_R(self,dataOut):
+        type  = dataOut.inputUnit
+        nHeis = dataOut.nHeights
+        data_RhoHV_R = numpy.zeros((nHeis))
+        if type == "Voltage":
+            avgcoherenceComplex= dataOut.dataPP_CCF
+            data_RhoHV_R = numpy.abs(avgcoherenceComplex)
+        if type == "Spectra":
+            data_RhoHV_R = dataOut.getCoherence()
+
+        return data_RhoHV_R
+
+    def getFasediferencialPhiD_P(self,dataOut,phase= True):
+        type  = dataOut.inputUnit
+        nHeis = dataOut.nHeights
+        data_PhiD_P = numpy.zeros((nHeis))
+        if type == "Voltage":
+            avgcoherenceComplex= dataOut.dataPP_CCF
+            if phase:
+                data_PhiD_P = numpy.arctan2(avgcoherenceComplex.imag,
+                                     avgcoherenceComplex.real) * 180 / numpy.pi
+        if type == "Spectra":
+            data_PhiD_P = dataOut.getCoherence(phase = phase)
+
+        return data_PhiD_P
+
+    def getReflectividad_D(self,dataOut,type):
+        '''-----------------------------Potencia de Radar -Signal S-----------------------------'''
+
+        Pr = dataOut.data_param[:,0,:]
+        '''---------------------------- Calculo de Noise y threshold para Reflectividad---------'''
+
+        Pr = Pr/100.0 # Conversion Watt
+        '''-----------2 Reflectividad del Radar y Factor de Reflectividad------'''
+        if not self.CR_Flag:
+            self.n_radar       = numpy.zeros((self.nCh,self.nHeis))
+            self.Z_radar       = numpy.zeros((self.nCh,self.nHeis))
+            #for R in range(self.nHeis):
+            #    self.n_radar[:,R] = self.RadarConstant*Pr[:,R]* (self.Range[:,R]*(10**3))**2
+
+            #    self.Z_radar[:,R] = self.n_radar[:,R]* self.lambda_**4/( numpy.pi**5 * self.Km**2)
+
+            self.n_radar[:,:] = self.RadarConstant*Pr[:,:]* (self.Range[:,:]*(10**3))**2
+            self.Z_radar[:,:] = self.n_radar[:,:]* self.lambda_**4/( numpy.pi**5 * self.Km**2)
+            
+            '''----------- Factor de Reflectividad Equivalente lamda_ < 10 cm , lamda_= 3.2cm-------'''
+            Zeh  =  self.Z_radar
+
+            if self.Pt<0.3:
+                factor=1
+            else:
+                factor=28#23.072
+
+            dBZeh = 10*numpy.log10(Zeh) + factor
+        else:
+            self.Z_radar       = numpy.zeros((self.nCh,self.nHeis))
+
+            #for R in range(self.nHeis):
+            #    self.Z_radar[0,R]= 10*numpy.log10(Pr[0,R])+20*numpy.log10(self.Range[0,R]*10**3)+67.41-10*numpy.log10(self.Pt)-59-10*numpy.log10(self.tauW)#63.58,65.26,68.91
+            #    self.Z_radar[1,R]= 10*numpy.log10(Pr[1,R])+20*numpy.log10(self.Range[1,R]*10**3)+67.17-10*numpy.log10(self.Pt)-59-10*numpy.log10(self.tauW)#64.26,65.79,62.33
+            
+            self.Z_radar[0,:]= 10*numpy.log10(Pr[0,:])+20*numpy.log10(self.Range[0,:]*10**3)+67.41-10*numpy.log10(self.Pt)-59-10*numpy.log10(self.tauW)#63.58,65.26,68.91
+            self.Z_radar[1,:]= 10*numpy.log10(Pr[1,:])+20*numpy.log10(self.Range[1,:]*10**3)+67.17-10*numpy.log10(self.Pt)-59-10*numpy.log10(self.tauW)#63.58,65.26,68.91
+
+            dBZeh= self.Z_radar
+
+        if type=='N':
+            return dBZeh
+        elif type=='D':
+            Zdb_D = dBZeh[0] - dBZeh[1]- self.sesgoZD
+            return Zdb_D
+
+    def getRadialVelocity_V(self,dataOut):
+        velRadial_V = dataOut.data_param[:,1,:]
+        return velRadial_V
+
+    def getAnchoEspectral_W(self,dataOut):
+        Sigmav_W = dataOut.data_param[:,2,:]
+        return Sigmav_W
+
+
+    def run(self,dataOut,variableList=None,Pt=1.58,Gt=38.5,Gr=38.5,Glna=59.0,lambda_=0.032, aL=1,
+                tauW= 0.2,thetaT=0.0314,thetaR=0.0314,Km =0.93,CR_Flag=0,min_index=0,sesgoZD=0):
+        if not self.isConfig:
+            self.setup(dataOut= dataOut, variableList=variableList,Pt=Pt,Gt=Gt,Gr=Gr,Glna=Glna,lambda_=lambda_, aL=aL,
+                        tauW= tauW,thetaT=thetaT,thetaR=thetaR,Km =Km,CR_Flag=CR_Flag,min_index=min_index,sesgoZD=sesgoZD)
+            self.isConfig = True
+
+        dataOut.data_param = self.setMoments(dataOut)
+
+        for i in range(len(self.variableList)):
+            if self.variableList[i] == 'Z':
+                dataOut.data_param[:,4,:] = self.getReflectividad_D(dataOut=dataOut,type='N')
+            if self.variableList[i] == 'D' and dataOut.nChannels>1:
+                dataOut.data_param[:,5,:] = self.getReflectividad_D(dataOut=dataOut,type='D')
+            if self.variableList[i] == 'P' and dataOut.nChannels>1:
+                dataOut.data_param[:,6,:] = self.getFasediferencialPhiD_P(dataOut=dataOut, phase=True)
+            if self.variableList[i] == 'R' and dataOut.nChannels>1:
+                dataOut.data_param[:,7,:] = self.getCoeficienteCorrelacionROhv_R(dataOut)
+
+        return dataOut
+
 class PedestalInformation(Operation):
 
     def __init__(self):
@@ -8307,6 +8485,151 @@ class PedestalInformation(Operation):
         dataOut.mode_op = scan
         dataOut.time_pedestal = round(time_pedestal,2)   # N 6
         return dataOut
+
+class PedestalInformation_2(Operation):
+
+    def __init__(self):
+        Operation.__init__(self)
+        self.filename = False
+        self.delay = 32
+        self.nTries = 3
+        self.nFiles = 5
+        self.flagAskMode = False
+
+    def find_file(self, timestamp):
+
+        dt = datetime.datetime.utcfromtimestamp(timestamp)
+        path = os.path.join(self.path, dt.strftime('%Y-%m-%dT%H-00-00'))
+
+        if not os.path.exists(path):
+            return False
+        fileList = glob.glob(os.path.join(path, '*.h5'))
+        fileList.sort()
+        return fileList
+
+    def find_next_file(self):
+
+        while True:
+            if self.utctime < self.utcfile:
+                self.flagNoData = True
+                break
+            self.flagNoData = False
+            file_size = len(self.fp['Data']['utc'])
+            if self.utctime < self.utcfile+file_size*self.interval:
+                break
+            dt = datetime.datetime.utcfromtimestamp(self.utcfile)
+            if dt.second > 0:
+                self.utcfile -= dt.second
+            self.utcfile += self.samples*self.interval
+            dt = datetime.datetime.utcfromtimestamp(self.utcfile)
+            path = os.path.join(self.path, dt.strftime('%Y-%m-%dT%H-00-00'))
+            self.filename = os.path.join(path, 'pos@{}.000.h5'.format(int(self.utcfile)))
+
+            for i in range(self.nFiles):
+                ok = False
+                for j in range(self.nTries):
+                    ok = False
+                    try:
+                        if not os.path.exists(self.filename):
+                            log.warning('Waiting {}s for position files...'.format(self.delay), self.name)
+                            time.sleep(1)
+                            continue
+                        self.fp.close()
+                        self.fp = h5py.File(self.filename, 'r')
+                        self.ele = self.fp['Data']['ele_pos'][:]
+                        self.azi = self.fp['Data']['azi_pos'][:] + 26.27 #+ self.heading
+                        self.azi[self.azi>360] = self.azi[self.azi>360] - 360
+                        self.time_pedestal = self.fp['Data']['utc'][:] # N 1.5
+                        log.log('Opening file: {}'.format(self.filename), self.name)
+                        ok = True
+                        break
+                    except Exception as e:
+                        log.warning('Waiting {}s for position file to be ready...'.format(self.delay), self.name)
+                        time.sleep(self.delay)
+                        continue
+                if ok:
+                    break
+                log.warning('Trying next file...', self.name)
+                self.utcfile += self.samples*self.interval
+                dt = datetime.datetime.utcfromtimestamp(self.utcfile)
+                path = os.path.join(self.path, dt.strftime('%Y-%m-%dT%H-00-00'))
+                self.filename = os.path.join(path, 'pos@{}.000.h5'.format(int(self.utcfile)))
+            if not ok:
+                log.error('No new position files found in {}'.format(path))
+                raise IOError('No new position files found in {}'.format(path))
+
+    def get_values(self):
+
+        if self.flagNoData:
+            return numpy.nan, numpy.nan, numpy.nan, numpy.nan #,numpy.nan #Should be self.mode? N 2
+        else:
+            index = int((self.utctime-self.utcfile)/self.interval)
+            try:
+                return self.azi[index], self.ele[index], None, self.time_pedestal[index] #,self.time_pedesal[index]    N 3
+            except:
+                return numpy.nan, numpy.nan, numpy.nan, numpy.nan #,numpy.nan N 4
+
+    def setup(self, dataOut, path, conf, samples, interval, mode, heading):
+
+        self.path = path
+        self.conf = conf
+        self.samples = samples
+        self.interval = interval
+        self.mode = mode
+        self.heading = heading
+        if mode is None:
+            self.flagAskMode = True
+        N = 0
+        while True:
+            if N == self.nTries+1:
+                log.error('No position files found in {}'.format(path), self.name)
+                raise IOError('No position files found in {}'.format(path))
+            filelist = self.find_file(dataOut.utctime)
+
+            if filelist == 0:
+                N += 1
+                log.warning('Waiting {}s for position files...'.format(self.delay), self.name)
+                time.sleep(self.delay)
+                continue
+            self.filename = filelist[0]
+            try:
+                self.fp = h5py.File(self.filename, 'r')
+                self.utcfile = int(self.filename.split('/')[-1][4:14])
+
+                self.ele = self.fp['Data']['ele_pos'][:]
+                self.azi = self.fp['Data']['azi_pos'][:] + 26.27 + self.heading
+                self.azi[self.azi>360] = self.azi[self.azi>360] - 360
+                self.time_pedestal = self.fp['Data']['utc'][:] # N 1
+                break
+            except:
+                log.warning('Waiting {}s for position file to be ready...'.format(self.delay), self.name)
+                time.sleep(self.delay)
+
+    def run(self, dataOut, path, conf=None, samples=1500, interval=0.04, time_offset=0, mode=None, heading=0):
+
+        if not self.isConfig:
+            self.setup(dataOut, path, conf, samples, interval, mode, heading)
+            self.isConfig   = True
+
+        self.utctime = dataOut.utctime + time_offset
+
+        self.find_next_file()
+
+        #az, el, scan = self.get_values()
+        az, el, scan,time_pedestal = self.get_values() # N 5
+
+        dataOut.flagNoData = False
+        if numpy.isnan(az) or numpy.isnan(el) :
+            dataOut.flagNoData = True
+            return dataOut
+
+        dataOut.azimuth =  round(az, 2)
+        dataOut.elevation = round(el, 2)
+        dataOut.mode_op = scan
+        dataOut.time_pedestal = round(time_pedestal,2)   # N 6
+        #log.log("TIME-----------------{}".format(self.delay),dataOut.time_pedestal)
+        return dataOut
+
 
 class Block360(Operation):
     '''
@@ -8503,6 +8826,211 @@ class Block360(Operation):
             else:
                 log.warning('Skipping angle {} / {}'.format(round(mean_az,1), round(mean_el,1)))
         
+        return dataOut
+
+class Block360_2(Operation):
+    '''
+    '''
+    isConfig       = False
+    __profIndex    = 0
+    __initime      = None
+    __lastdatatime = None
+    __buffer       = None
+    __dataReady    = False
+    n              = None
+    index          = 0
+    mode           = None
+
+    def __init__(self,**kwargs):
+        Operation.__init__(self,**kwargs)
+
+    def setup(self, dataOut, attr, angles,horario,heading,bottom):
+        '''
+        n= Numero de PRF's de entrada
+        '''
+        self.__initime        = None
+        self.__lastdatatime   = 0
+        self.__dataReady      = False
+        self.__buffer         = 0
+        self.index            = 0
+        self.attr = attr
+        self.__buffer  = []
+        self.azi       = []
+        self.ele       = []
+        self.__noise   = []
+        self.__time_pedestal = [] # c1
+        self.angles = angles
+        self.horario= horario
+        self.heading = heading
+        self.bottom  = bottom
+
+    def putData(self, data, attr):
+        '''
+        Add a profile to he __buffer and increase in one the __profiel Index
+        '''
+        tmp= getattr(data, attr)
+        self.__buffer.append(tmp)
+        self.azi.append(data.azimuth)
+        self.ele.append(data.elevation)
+        self.__time_pedestal.append(data.time_pedestal) # c2        
+        try:
+            #print("SHOW ------", type(data.dataPP_NOISE),data.dataPP_NOISE.shape,"value:",data.dataPP_NOISE)
+            self.__noise.append(data.dataPP_NOISE)
+        except:
+            #print("SHOW ------", type(data.noise),data.noise.shape,"value:",data.noise)
+            self.__noise.append(data.noise)
+        self.__profIndex  += 1
+
+    def pushData(self, data, case_flag):
+        '''
+        '''
+
+        data_360 = numpy.array(self.__buffer).transpose(1, 2, 0, 3)
+        data_p   = numpy.array(self.azi)
+        data_e   = numpy.array(self.ele)
+        data_n   = numpy.array(self.__noise)
+        time_pedestal  = numpy.array(self.__time_pedestal) #c3
+        n   = self.__profIndex
+
+        self.__buffer = []
+        self.azi      = []
+        self.ele      = []
+        self.__noise  = []
+        self.__time_pedestal = [] # c4
+        self.__profIndex = 0
+
+        if case_flag in (0, 1, -1):
+            self.putData(data=data, attr = self.attr)
+
+        return data_360, n, data_p, data_e, data_n ,time_pedestal #time_pedestal c5
+
+    def byProfiles(self, dataOut):
+
+        self.__dataReady = False
+        data_360 =  []
+        data_p = None
+        data_e = None
+        data_n = None
+        time_pedestal = None # c6
+
+        self.putData(data=dataOut, attr = self.attr)
+
+        if self.__profIndex > 5:
+            case_flag = self.checkcase()
+
+            if self.flagMode == 1: #'AZI':
+                if case_flag == 0: #Ya giró
+                    self.__buffer.pop() #Erase last data
+                    self.azi.pop()
+                    self.ele.pop()
+                    self.__time_pedestal.pop() # c7
+                    data_360 ,n,data_p,data_e,data_n,time_pedestal = self.pushData(dataOut, case_flag) # time_pedestal c8
+                    if len(data_p)>350:
+                        self.__dataReady = True
+            elif self.flagMode == 0: #'ELE'
+                if case_flag == 1: #Bajada
+                    self.__buffer.pop() #Erase last data
+                    self.azi.pop()
+                    self.ele.pop()
+                    self.__time_pedestal.pop() #c9
+                    data_360, n, data_p, data_e, data_n,time_pedestal  = self.pushData(dataOut, case_flag) # time_pedestal c10
+                    self.__dataReady = True
+                if case_flag == -1: #Subida
+                    self.__buffer.pop() #Erase last data
+                    self.azi.pop()
+                    self.ele.pop()
+                    self.__time_pedestal.pop() # time_pedestal c11
+                    data_360, n, data_p, data_e, data_n, time_pedestal  = self.pushData(dataOut, case_flag) # time_pedestal c12
+                    #self.__dataReady = True
+
+        return data_360, data_p, data_e, data_n ,time_pedestal  #time_pedestal c13
+
+
+    def blockOp(self, dataOut, datatime= None):
+        if self.__initime == None:
+            self.__initime = datatime
+        data_360, data_p, data_e, data_n,time_pedestal = self.byProfiles(dataOut) # time_pedestal c14
+        self.__lastdatatime = datatime
+
+        avgdatatime = self.__initime
+        if self.n==1:
+            avgdatatime = datatime
+
+        self.__initime = datatime
+        return data_360, avgdatatime, data_p, data_e, data_n ,time_pedestal # time_pedestal c15
+
+    def checkcase(self):
+
+        sigma_ele = numpy.nanstd(self.ele[-5:])
+        sigma_azi = numpy.nanstd(self.azi[-5:])
+
+        if sigma_ele<.5 and sigma_azi<.5:
+            if sigma_ele<sigma_azi:
+                self.flagMode = 1
+                self.mode_op = 'PPI'
+            else:
+                self.flagMode = 0
+                self.mode_op = 'RHI'
+        elif sigma_ele < .5:
+            self.flagMode = 1
+            self.mode_op = 'PPI'
+        elif sigma_azi < .5:
+            self.flagMode = 0
+            self.mode_op = 'RHI'
+        else:
+            self.flagMode = None
+            self.mode_op = 'None'
+
+        if self.flagMode == 1: #'AZI'
+            start  = self.azi[-2]
+            end    = self.azi[-1]
+            diff_angle = (end-start)
+            if self.horario== True:
+               if diff_angle < 0: #Ya giró
+                   return 0
+            else:
+               if diff_angle > 0: #Ya giró
+                   return 0
+        elif self.flagMode == 0: #'ELE'
+
+            start  = self.ele[-3]
+            middle = self.ele[-2]
+            end    = self.ele[-1]
+
+            if end < self.bottom:
+                return 1
+            elif (middle>start and end<middle):
+                return -1
+
+    def run(self, dataOut, attr_data='dataPP_POWER', runNextOp = False, angles=[],horario=True,heading=0,bottom=0,**kwargs):
+
+        dataOut.attr_data = attr_data
+        dataOut.runNextOp = runNextOp
+
+        if not self.isConfig:
+            self.setup(dataOut=dataOut, attr=attr_data, angles=angles,horario=horario, heading=heading,bottom=bottom,**kwargs)
+            self.isConfig   = True
+
+        data_360, avgdatatime, data_p, data_e, data_n,time_pedestal = self.blockOp(dataOut, dataOut.utctime) # time_pedestal c16
+
+        dataOut.flagNoData = True
+        if self.__dataReady:
+            mean_az = numpy.mean(data_p[25:-25])
+            mean_el = numpy.mean(data_e[25:-25])
+            if round(mean_az,1) in angles or round(mean_el,1) in angles:
+                setattr(dataOut, attr_data, data_360 )
+                dataOut.data_azi   = data_p+self.heading
+                dataOut.data_azi[dataOut.data_azi>360]=dataOut.data_azi[dataOut.data_azi>360]-360
+                dataOut.data_ele   = data_e
+                dataOut.radar_sweep_time  = time_pedestal # time_pedestal c17
+                dataOut.utctime    = avgdatatime
+                dataOut.data_noise = data_n
+                dataOut.flagNoData = False
+                dataOut.flagMode   = self.flagMode
+                dataOut.mode_op    = self.mode_op
+            else:
+                log.warning('Skipping angle {} / {}'.format(round(mean_az,1), round(mean_el,1)))
+
         return dataOut
 
 class MergeProc(ProcessingUnit):

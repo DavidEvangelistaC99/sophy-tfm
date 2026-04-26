@@ -8,7 +8,7 @@ c      character*47 L
       character(1024) :: fqual_temp
       character(512) :: ppath
       character(512) :: cpath
-      ppath = "/home/idi/Documents/schain-v3.14"
+      ppath = "/home/david/Documentos/sophy-tfm/schain-merge"
       cpath = "/schainf/Ffiles/bfmodel/"    
 c      write(*,*) "Len:", L
       fqual_temp = TRIM(ppath)//TRIM(cpath)

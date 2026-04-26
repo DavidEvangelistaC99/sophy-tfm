@@ -885,6 +885,290 @@ class WeatherParamsPlot(Plot):
             elif data['mode_op'] == 'RHI':
                 ax.grid(color='grey', alpha=0.5, linestyle='--', linewidth=1)
 
+class WeatherParamsPlot_2(Plot):
+
+    plot_type = 'scattermap'
+    buffering = False
+
+    plot_operation = 'weather_radar'
+
+    def setup(self):
+
+        self.ncols = 1
+        self.nrows = 1
+        self.nplots= 1
+
+        if self.channels is not None:
+            self.nplots = len(self.channels)
+            self.ncols = len(self.channels)
+        else:
+            self.nplots = self.data.shape(self.CODE)[0]
+            self.ncols = self.nplots
+            self.channels = list(range(self.nplots))
+
+        self.colorbar=True
+        if len(self.channels)>1:
+            self.width = 12
+        else:
+            self.width   =8
+        self.height  =7
+        self.ini     =0
+        self.len_azi =0
+        self.buffer_ini  = None
+        self.buffer_ele   = None
+        self.plots_adjust.update({'wspace': 0.4, 'hspace':0.4, 'left': 0.1, 'right': 0.9, 'bottom': 0.1})
+        self.flag    =0
+        self.indicador= 0
+        self.last_data_ele = None
+        self.val_mean      = None
+
+    def update(self, dataOut):
+
+        vars = {
+            'S' : 0,
+            'V' : 1,
+            'W' : 2,
+            'SNR' : 3,
+            'Z' : 4,
+            'D' : 5,
+            'P' : 6,
+            'R' : 7,
+        }
+
+        data = {}
+        meta = {}
+
+        ##if hasattr(dataOut, 'nFFTPoints'):
+        ##    factor = dataOut.normFactor*10.0 # CONSIDERACION ENTRE PULSE PAIR Y FFT
+        ##else:
+        ##    factor = 1
+
+        if hasattr(dataOut, 'dparam'):
+            tmp = getattr(dataOut, 'data_param')
+        else:
+            #print("-------------------self.attr_data[0]",self.attr_data[0])
+            if 'S' in self.attr_data[0]:
+                if self.attr_data[0]=='S':
+                    tmp = 10*numpy.log10(10.0*getattr(dataOut, 'data_param')[:,0,:]) ## /(factor))   ya no considerar factor se aplica factor jroproc_parametrs
+                if self.attr_data[0]=='SNR':
+                    tmp = 10*numpy.log10(getattr(dataOut, 'data_param')[:,3,:])
+            else:
+                tmp = getattr(dataOut, 'data_param')[:,vars[self.attr_data[0]],:]
+
+        if self.mask:
+            #---------nuevo procesamiento mask----------------#
+            
+            RMIX        = 6.0 #5.8
+            H0          = -1.75
+            range_km    = 60
+            r           = int((RMIX + -(H0))*2000/range_km)
+            
+            self.mask1  = 0.1   # Umbral para alturas < index
+            self.mask   = 0.25   # Umbral para alturas >= index
+
+            # Crear máscaras por rangos de altura
+            mask1 = (dataOut.data_param[:,3,:] < self.mask1) & (numpy.arange(dataOut.data_param.shape[3])[None, None, :] <  r) #self.index)
+            mask  = (dataOut.data_param[:,3,:] < self.mask)  & (numpy.arange(dataOut.data_param.shape[3])[None, None, :] >= r) #self.index)
+            
+            # Aplicar filtros
+            tmp[mask1] = numpy.nan
+            tmp[mask]  = numpy.nan
+            mask       = numpy.nansum((tmp, numpy.roll(tmp, 1),numpy.roll(tmp, -1)), axis=0) == tmp
+            tmp[mask]  = numpy.nan
+            
+            #-----------------------original---------------------#
+            
+            # mask = dataOut.data_param[:,3,:] < self.mask
+            # tmp[mask] = numpy.nan
+            # mask = numpy.nansum((tmp, numpy.roll(tmp, 1),numpy.roll(tmp, -1)), axis=0) == tmp
+            # tmp[mask] = numpy.nan
+            
+            # numpy.savez("/DATA_RM/DATA/HYO@2025-11-11T00-00-34/data_chirp_0.5_NEW_NEW_NEW.npz", data = dataOut.data_param[:,3,:])
+            #------------------------------------------------------#
+
+        r = dataOut.heightList
+        delta_height = r[1]-r[0]
+        valid = numpy.where(r>=0)[0]
+        data['r'] = numpy.arange(len(valid))*delta_height
+
+        data['data'] = [0, 0]
+
+        try:
+            data['data'][0] = tmp[0][:,valid]
+            data['data'][1] = tmp[1][:,valid]
+        except:
+            data['data'][0] = tmp[0][:,valid]
+            data['data'][1] = tmp[0][:,valid]
+
+        if dataOut.mode_op == 'PPI':
+            self.CODE = 'PPI'
+            self.title = self.CODE
+        elif dataOut.mode_op == 'RHI':
+            self.CODE = 'RHI'
+            self.title = self.CODE
+
+        data['azi'] = dataOut.data_azi
+        data['ele'] = dataOut.data_ele
+
+        if isinstance(dataOut.mode_op, bytes):
+            try:
+                dataOut.mode_op = dataOut.mode_op.decode()
+            except:
+                dataOut.mode_op = str(dataOut.mode_op, 'utf-8')
+        data['mode_op'] = dataOut.mode_op
+        self.mode = dataOut.mode_op
+
+        return data, meta
+
+    def plot(self):
+        data = self.data[-1]
+        z = data['data']
+        r = data['r']
+        self.titles = []
+
+        self.zmax = self.zmax if self.zmax else numpy.nanmax(z)
+        self.zmin = self.zmin if self.zmin is not None else numpy.nanmin(z)
+
+        if isinstance(data['mode_op'], bytes):
+            data['mode_op'] = data['mode_op'].decode()
+
+        if data['mode_op'] == 'RHI':
+            r, theta = numpy.meshgrid(r, numpy.radians(data['ele']))
+            len_aux = int(data['azi'].shape[0]/4)
+            mean = numpy.mean(data['azi'][len_aux:-len_aux])
+            x, y = r*numpy.cos(theta), r*numpy.sin(theta)
+            if self.yrange:
+                self.ylabel= 'Height [km]'
+                self.xlabel= 'Distance from radar [km]'
+                self.ymax = self.yrange
+                self.ymin = 0
+                self.xmax = self.xrange if self.xrange else numpy.nanmax(r)
+                self.xmin = 0 #-self.xrange if self.xrange else -numpy.nanmax(r)  # HARDCODE
+                self.setrhilimits = False
+            else:
+                self.ymin = 0
+                self.ymax = numpy.nanmax(r)
+                self.xmin = -numpy.nanmax(r)
+                self.xmax = numpy.nanmax(r)
+
+        elif data['mode_op'] == 'PPI':
+            r, theta = numpy.meshgrid(r, -numpy.radians(data['azi'])+numpy.pi/2)
+            len_aux = int(data['ele'].shape[0]/4)
+            mean = numpy.mean(data['ele'][len_aux:-len_aux])
+            x, y = r*numpy.cos(theta)*numpy.cos(numpy.radians(mean)), r*numpy.sin(
+                    theta)*numpy.cos(numpy.radians(mean))
+            x = km2deg(x) + self.longitude
+            y = km2deg(y) + self.latitude
+            if self.xrange:
+                self.ylabel= 'Latitude'
+                self.xlabel= 'Longitude'
+
+                self.xmin = km2deg(-self.xrange) + self.longitude
+                self.xmax = km2deg(self.xrange) + self.longitude
+
+                self.ymin = km2deg(-self.xrange) + self.latitude
+                self.ymax = km2deg(self.xrange) + self.latitude
+            else:
+                self.xmin = km2deg(-numpy.nanmax(r)) + self.longitude
+                self.xmax = km2deg(numpy.nanmax(r)) + self.longitude
+
+                self.ymin = km2deg(-numpy.nanmax(r)) + self.latitude
+                self.ymax = km2deg(numpy.nanmax(r)) + self.latitude
+
+        self.clear_figures_wr()
+
+        if data['mode_op'] == 'PPI':
+            axes = self.axes['PPI']
+        else:
+            axes = self.axes['RHI']
+
+        if self.colormap in cb_tables:
+            norm = cb_tables[self.colormap]['norm']
+        else:
+            norm = None
+
+        for i, ax in enumerate(axes):
+
+            if norm is None:
+                ax.plt = ax.pcolormesh(x, y, z[i], cmap=self.colormap, vmin=self.zmin, vmax=self.zmax)
+            else:
+                ax.plt = ax.pcolormesh(x, y, z[i], cmap=self.colormap, norm=norm)
+
+            if data['mode_op'] == 'RHI':
+                len_aux = int(data['azi'].shape[0]/4)
+                mean = numpy.mean(data['azi'][len_aux:-len_aux])
+                if len(self.channels) !=1:
+                    self.titles = ['RHI {} at AZ: {} CH {}'.format(self.labels[x], str(round(mean,1)), x) for x in self.channels]
+                else:
+                    self.titles = ['RHI {} at AZ: {} CH {}'.format(self.labels[0], str(round(mean,1)), self.channels[0])]
+            elif data['mode_op'] == 'PPI':
+                len_aux = int(data['ele'].shape[0]/4)
+                mean = numpy.mean(data['ele'][len_aux:-len_aux])
+                if len(self.channels) !=1:
+                    self.titles = ['PPI {} at EL: {} CH {}'.format(self.labels[x], str(round(mean,1)), x) for x in self.channels]
+                else:
+                    self.titles = ['PPI {} at EL: {} CH {}'.format(self.labels[0], str(round(mean,1)), self.channels[0])]
+            self.mode_value = round(mean,1)
+
+            if data['mode_op'] == 'PPI':
+                if self.map:
+                    gl = ax.gridlines(crs=ccrs.PlateCarree(), draw_labels=True,
+                    linewidth=1, color='gray', alpha=0.5, linestyle='--')
+                    gl.xlabel_style = {'size': 8}
+                    gl.ylabel_style = {'size': 8}
+                    gl.xlabels_top = False
+                    gl.ylabels_right = False
+                    shape_d = os.path.join(self.shapes,'Distritos/PER_adm3.shp')
+                    shape_p = os.path.join(self.shapes,'PER_ADM2/PER_ADM2.shp')
+                    capitales = os.path.join(self.shapes,'CAPITALES/cap_distrito.shp')
+                    vias = os.path.join(self.shapes,'Carreteras/VIAS_NACIONAL_250000.shp')
+                    reader_d = shpreader.BasicReader(shape_d, encoding='latin1')
+                    reader_p = shpreader.BasicReader(shape_p, encoding='latin1')
+                    reader_c = shpreader.BasicReader(capitales, encoding='latin1')
+                    reader_v = shpreader.BasicReader(vias, encoding='latin1')
+                    caps = [x for x in reader_c.records() if x.attributes['DEPARTA']=='JUNIN' and x.attributes['CATEGORIA']=='CIUDAD']
+                    districts = [x for x in reader_d.records() if x.attributes['NAME_1']=='Piura']
+                    provs = [x for x in reader_p.records()]
+                    vias = [x for x in reader_v.records()]
+
+                    # Display limits and streets
+                    shape_feature = ShapelyFeature([x.geometry for x in districts], ccrs.PlateCarree(), facecolor="none", edgecolor='grey', lw=0.5)
+                    ax.add_feature(shape_feature)
+                    shape_feature = ShapelyFeature([x.geometry for x in provs], ccrs.PlateCarree(), facecolor="none", edgecolor='white', lw=1)
+                    ax.add_feature(shape_feature)
+                    shape_feature = ShapelyFeature([x.geometry for x in vias], ccrs.PlateCarree(), facecolor="none", edgecolor='yellow', lw=1)
+                    ax.add_feature(shape_feature)
+
+                    for cap in caps:
+                        if cap.attributes['NOMBRE'] in ('CONCEPCIÓN', 'HUANCAYO', 'JAUJA', 'LA OROYA', 'CHUPACA'):
+                            ax.text(cap.attributes['X'], cap.attributes['Y'], cap.attributes['NOMBRE'], size=7, color='white', weight='bold')
+                        elif cap.attributes['NOMBRE'] in ('NEGRITOS', 'SAN LUCAS', 'QUERECOTILLO', 'TAMBO GRANDE', 'CHULUCANAS', 'CATACAOS', 'LA UNION'):
+                            ax.text(cap.attributes['X'], cap.attributes['Y'], cap.attributes['NOMBRE'].title(), size=6, color='white')
+                    ax.plot(-75.3199751, -12.041787, '*', color='orange')
+                else:
+                    ax.grid(color='grey', alpha=0.5, linestyle='--', linewidth=1)
+
+                if self.xrange<=10:
+                    ranges = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+                elif self.xrange<=30:
+                    ranges = [5, 10, 15, 20, 25, 30, 35]
+                elif self.xrange<=60:
+                    ranges = [10, 20, 30, 40, 50, 60]
+                elif self.xrange<=100:
+                    ranges = [15, 30, 45, 60, 75, 90]
+
+                for R in ranges:
+                    if R <= self.xrange:
+                        circle = Circle((self.longitude, self.latitude), km2deg(R), facecolor='none',
+                            edgecolor='skyblue', linewidth=1, alpha=0.5)
+                        ax.add_patch(circle)
+                        ax.text(km2deg(R)*numpy.cos(numpy.radians(45))+self.longitude,
+                            km2deg(R)*numpy.sin(numpy.radians(45))+self.latitude,
+                            '{}km'.format(R), color='skyblue', size=7)
+            elif data['mode_op'] == 'RHI':
+                ax.grid(color='grey', alpha=0.5, linestyle='--', linewidth=1)
+
+
 class AverageDriftsPlot_v2(Plot):
     '''
     Plot for average 150 Km echoes

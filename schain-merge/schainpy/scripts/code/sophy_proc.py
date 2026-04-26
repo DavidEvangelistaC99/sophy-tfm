@@ -1,10 +1,11 @@
 # SOPHY PROC script
-import modFreqNewLast as modf
+import modFreq as modf
 
 import os, sys, json, argparse
 import multiprocessing
 import datetime
 import time
+import matplotlib.pyplot as plt
 
 # PATH = '/DATA_RM/DATA'
 
@@ -115,14 +116,20 @@ def main(args):
         verbose=False,
     )
 
-    if not conf['usrp_tx']['enable_2']: # One Pulse
+    # Conditional change to TFM experiments. Apply: or (...)
+    if not conf['usrp_tx']['enable_2'] or (conf['usrp_tx']['enable_2'] and not conf['usrp_tx']['repetitions_2']): # One Pulse
         n_pulses = 1
 
         print("ONE PULSE")
         
         if conf['usrp_tx']['code_type_1'] == 'CHIRP':
             print("CHIRP PULSE")
-            pulse_1_width = int((2*(conf['usrp_tx']['ipp']*1.0e3)/(3*1.0e8)*conf['usrp_tx']['dc_1']*1.0e-2)*1.0e6)
+            if conf['usrp_tx']['enable_2'] and not conf['usrp_tx']['repetitions_2']:
+                pulse_1_width = int((2*(conf['usrp_tx']['ipp']*1.0e3)/(3*1.0e8)*(conf['usrp_tx']['dc_1']+conf['usrp_tx']['dc_2'])*1.0e-2)*1.0e6)
+                
+            else:
+                pulse_1_width = int((2*(conf['usrp_tx']['ipp']*1.0e3)/(3*1.0e8)*conf['usrp_tx']['dc_1']*1.0e-2)*1.0e6)
+                
             pulse_1_repetitions = N
         else:
             print("CODE PULSE")
@@ -138,20 +145,71 @@ def main(args):
             
             if conf['usrp_tx']['code_type_1'] == 'CHIRP':
 
-                #-------------------CODIGO CHIRP ---------------------------
-                # Parameters
-                A1 = conf['usrp_tx']['amplitude_1']
-                ipp1 = 2*(conf['usrp_tx']['ipp']*1.0e3)/(3*1.0e8)
-                dc1 = conf['usrp_tx']['dc_1']     # Consideramos el SR RX
-                sr_rx1 = conf['usrp_tx']['sampleraterx']*1.0e6 
-                fc1 = conf['usrp_tx']['fc_1'] 
-                bw1 = conf['usrp_tx']['bw_1']*1.0e6 
-                t_d1 = conf['usrp_tx']['time_d_1']
-                window1 = conf['usrp_tx']['window_1']
+                #-------------------CODIGO CHIRP TFM------------------------
+                if conf['usrp_tx']['enable_2'] and not conf['usrp_tx']['repetitions_2']:
+                    # Parameters short chirp
+                    A1 = conf['usrp_tx']['amplitude_1']
+                    ipp1 = 2*(conf['usrp_tx']['ipp']*1.0e3)/(3*1.0e8)
+                    dc1 = int(conf['usrp_tx']['dc_1'])    # Consideramos el SR RX
+                    sr_rx1 = conf['usrp_tx']['sampleraterx']*1.0e6 
+                    fc1 = conf['usrp_tx']['fc_1'] 
+                    bw1 = conf['usrp_tx']['bw_1']*1.0e6 
+                    t_d1 = conf['usrp_tx']['time_d_1']
+                    window1 = conf['usrp_tx']['window_1']
 
-                chirp_tx_1, _ = modf.chirpMod(A1, ipp1, dc1, sr_rx1, sr_rx1, fc1, bw1, t_d = 0, window = window1, mode_f = 0)
+                    # Parameters large chirp
+                    A2 = conf['usrp_tx']['amplitude_2']
+                    ipp2 = 2*(conf['usrp_tx']['ipp']*1.0e3)/(3*1.0e8)
+                    dc2 = conf['usrp_tx']['dc_2']     # Consideramos el SR RX
+                    sr_rx2 = conf['usrp_tx']['sampleraterx']*1.0e6 
+                    fc2 = conf['usrp_tx']['fc_2'] 
+                    bw2 = conf['usrp_tx']['bw_2']*1.0e6 
+                    t_d2 = conf['usrp_tx']['time_d_2']
+                    window2 = conf['usrp_tx']['window_2']
+                    
+                    # TFM chirp
+                    full_chirp_1 = modf.chirpModUnion_1(ipp,
+                                                        sr_rx1, 
+                                                        sr_rx1, 
+                                                        A1, 
+                                                        A2, 
+                                                        dc1, 
+                                                        dc2, 
+                                                        fc1, 
+                                                        fc2, 
+                                                        bw1, 
+                                                        bw2, 
+                                                        0.0, 
+                                                        window1, 
+                                                        window2)
+                    
+                    chirp_tx_large, _ = modf.chirpMod(A1, ipp1, dc1, sr_rx1, sr_rx1, fc1, bw1, t_d = 0, window = window1, mode_f = 0)
+                    chirp_tx_short, _ = modf.chirpMod(A2, ipp2, dc2, sr_rx2, sr_rx2, fc2, bw2, t_d = 0, window = window2, mode_f = 0)
+                                    
+                    # code1_ = chirp_tx_short
+                    code1_ = full_chirp_1[0: int(len(full_chirp_1)*(dc1 + dc2)/100)]
+                    print("HOLA")
+                    print(len(code1_))
+                    # t = [i for i in range(len(code1_))]
+                    # plt.plot(t,code1_)
+                    # plt.show()
 
-                code1_ = chirp_tx_1
+                else:
+                    #-------------------CODIGO CHIRP ---------------------------
+                    # Parameters
+                    A1 = conf['usrp_tx']['amplitude_1']
+                    ipp1 = 2*(conf['usrp_tx']['ipp']*1.0e3)/(3*1.0e8)
+                    dc1 = conf['usrp_tx']['dc_1']     # Consideramos el SR RX
+                    sr_rx1 = conf['usrp_tx']['sampleraterx']*1.0e6 
+                    fc1 = conf['usrp_tx']['fc_1'] 
+                    bw1 = conf['usrp_tx']['bw_1']*1.0e6 
+                    t_d1 = conf['usrp_tx']['time_d_1']
+                    window1 = conf['usrp_tx']['window_1']
+
+                    chirp_tx_1, _ = modf.chirpMod(A1, ipp1, dc1, sr_rx1, sr_rx1, fc1, bw1, t_d = 0, window = window1, mode_f = 0)
+
+                    code1_ = chirp_tx_1
+                
                 code = [code1_]
 
             else:
@@ -165,6 +223,16 @@ def main(args):
             op.addParameter(name='nCode', value=len(code), format='int')
             op.addParameter(name='nBaud', value=len(code[0]), format='int')
             ncode = len(code)
+            
+            if conf['usrp_tx']['enable_2'] and not conf['usrp_tx']['repetitions_2']:
+                # New parameters for TFM experiments
+                op.addParameter(name='code_1', value = chirp_tx_large, format='list')
+                op.addParameter(name='code_2', value = chirp_tx_short, format='list')
+                op.addParameter(name='DC_1', value = dc1, format='int')
+                op.addParameter(name='H0', value = H0, format='float')
+                op.addParameter(name='RMIX', value = RMIX, format='float')
+                op.addParameter(name='TFMFlag', value = True, format='bool')
+
             if ncode>1:
                 op = voltage.addOperation(name='CohInt', optype='other') #Minimo integrar 2 perfiles por ser codigo complementario
                 op.addParameter(name='n', value=len(code), format='int')
@@ -194,7 +262,11 @@ def main(args):
                 op = spc_proc.addOperation(name='removeDC', optype='self')                
         
         else:
-            op = voltage.addOperation(name='PulsePair_vRF', optype='other')
+            if conf['usrp_tx']['enable_2'] and not conf['usrp_tx']['repetitions_2']:
+                op = voltage.addOperation(name='PulsePair_vRF_2', optype='other')
+                print("uwuwuwuuwuwu")
+            else:
+                op = voltage.addOperation(name='PulsePair_vRF', optype='other')
             op.addParameter(name='n', value=int(conf['usrp_tx']['repetitions_1'])/ncode, format='int')
             if args.rmDC:
                 op.addParameter(name='removeDC', value=1, format='int')
@@ -203,42 +275,67 @@ def main(args):
         proc = project.addProcUnit(datatype='ParametersProc', inputId=input_id)
         proc.addParameter(name='runNextUnit', value=True)
 
-        op = proc.addOperation(name='PedestalInformation')
-        op.addParameter(name='path', value=path_ped, format='str')
-        op.addParameter(name='interval', value='0.04')
-        op.addParameter(name='time_offset', value=time_offset)
-        op.addParameter(name='mode', value=args.mode)
-        op.addParameter(name='heading', value=conf['heading'])
+        if conf['usrp_tx']['enable_2'] and not conf['usrp_tx']['repetitions_2']:
 
-        op = proc.addOperation(name='Block360')
-        #op.addParameter(name='runNextOp', value=True)
-        if args.spc:
-            op.addParameter(name='attr_data', value='data_pow,data_snr,data_dop,data_width')
+            print("Entramossssasss")
+            opObj10 = proc.addOperation(name="WeatherRadar_2")
+            opObj10.addParameter(name='tauW',value=(1e-6/sample_rate)*len(code[0]))
+            opObj10.addParameter(name='Pt',value=200)
+
+            op = proc.addOperation(name='PedestalInformation_2')
+            op.addParameter(name='path', value=path_ped, format='str')
+            op.addParameter(name='interval', value='0.04')
+            op.addParameter(name='time_offset', value=time_offset)
+            op.addParameter(name='mode', value=args.mode)
+            op.addParameter(name='heading', value=conf['heading'])
+
+            op = proc.addOperation(name='Block360_2')
+            op.addParameter(name='runNextOp', value=True)
+            op.addParameter(name='attr_data', value='data_param')
+            op.addParameter(name='angles', value=angles)
+            op.addParameter(name='heading', value=conf['heading'])
+            op.addParameter(name='bottom',value=bottom)
+
         else:
-            op.addParameter(name='attr_data', value='data_pair0,data_pair1,data_ccf')
-        op.addParameter(name='angles', value=angles)
-        op.addParameter(name='heading', value=conf['heading'])
-        op.addParameter(name='bottom',value=bottom)
+            op = proc.addOperation(name='PedestalInformation')
+            op.addParameter(name='path', value=path_ped, format='str')
+            op.addParameter(name='interval', value='0.04')
+            op.addParameter(name='time_offset', value=time_offset)
+            op.addParameter(name='mode', value=args.mode)
+            op.addParameter(name='heading', value=conf['heading'])
 
-        opObj10 = proc.addOperation(name="WeatherRadar")
-        opObj10.addParameter(name='variableList', value=parameters)
-        opObj10.addParameter(name='tauW',value=(1e-6/sample_rate)*len(code[0]))
-        opObj10.addParameter(name='Pt',value=200)
-        opObj10.addParameter(name='mask',value=MASK1)
-        opObj10.addParameter(name='CR_Flag',value=True)
-        opObj10.addParameter(name='noise_angle', value=2.6)
+            op = proc.addOperation(name='Block360')
+            #op.addParameter(name='runNextOp', value=True)
+            if args.spc:
+                op.addParameter(name='attr_data', value='data_pow,data_snr,data_dop,data_width')
+            else:
+                op.addParameter(name='attr_data', value='data_pair0,data_pair1,data_ccf')
+            op.addParameter(name='angles', value=angles)
+            op.addParameter(name='heading', value=conf['heading'])
+            op.addParameter(name='bottom',value=bottom)
+
+            opObj10 = proc.addOperation(name="WeatherRadar")
+            opObj10.addParameter(name='variableList', value=parameters)
+            opObj10.addParameter(name='tauW',value=(1e-6/sample_rate)*len(code[0]))
+            opObj10.addParameter(name='Pt',value=200)
+            opObj10.addParameter(name='mask',value=MASK1)
+            opObj10.addParameter(name='CR_Flag',value=True)
+            opObj10.addParameter(name='noise_angle', value=2.6)
 
 
         for param in parameters:
 
             if args.plot:
+                if conf['usrp_tx']['enable_2'] and not conf['usrp_tx']['repetitions_2']:
 
-
-                op= proc.addOperation(name='WeatherParamsPlot')
+                    print("alohaaaa")
+                    op= proc.addOperation(name='WeatherParamsPlot_2')
+                else:
+                    op= proc.addOperation(name='WeatherParamsPlot')
                 if args.save: op.addParameter(name='save', value=path_plots, format='str')
                 op.addParameter(name='save_period', value=-1)
                 op.addParameter(name='show', value=args.show)
-                op.addParameter(name='channels', value='0,')
+                op.addParameter(name='channels', value='1,')
                 op.addParameter(name='zmin', value=PARAM[param]['zmin'])
                 op.addParameter(name='zmax', value=PARAM[param]['zmax'])
                 op.addParameter(name='yrange', value=0.15, format='float')# esto estaba en 20
@@ -254,6 +351,10 @@ def main(args):
                 op.addParameter(name='latitude', value=conf['latitude'], format='float')
                 op.addParameter(name='longitude', value=conf['longitude'], format='float')
                 op.addParameter(name='map', value=True)
+
+                if conf['usrp_tx']['enable_2'] and not conf['usrp_tx']['repetitions_2']:
+                    op.addParameter(name='mask', value=MASK1, format='float')
+
 
             #if MASK1: op.addParameter(name='mask', value=MASK1, format='float')
                 if args.server:
@@ -693,4 +794,7 @@ En este experimento se observa que la h0 = -1.4
 """
 
 # python sophy_proc.py CHIRP@2025-10-16T19-30-55 --parameters SNR  --plot --save --rmDC --label 31_03_26 --range 60 --mask -9.0
-# python sophy_proc.py CHIRP_DP@2025-12-11T15-20-07 --parameters SNR  --plot --save --rmDC --label 14_04_26 --range 60 --mask -9.0
+# python3 sophy_proc.py CHIRP_DP@2025-12-11T15-20-07 --parameters SNR  --plot --save --rmDC --label 25_04_26 --range 60 --mask -9.0
+
+# Test TFM
+# python3 sophy_proc.py CHIRP_TFM@2026-01-27T20-36-02 --parameters SNR  --plot --save --rmDC --label 25_04_26 --range 60 --mask -9.0

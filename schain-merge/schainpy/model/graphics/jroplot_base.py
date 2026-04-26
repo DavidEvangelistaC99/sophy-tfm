@@ -1019,14 +1019,18 @@ class Plot(Operation):
         if self.data and 'time' in self.xaxis and (tm - self.tmin) >= self.xrange * 60 * 60:
             self.save_time = tm
             if self.plot_operation == 'weather_radar':
+                print("holaaaaaaaa clear wr")
                 self.__plot_wr()
             else:
+                print("hola no es clear weather radar")
                 self.__plot()
             self.tmin += self.xrange * 60 * 60
             self.data.setup()
             if self.plot_operation == 'weather_radar':
+                print("holaaaaaaaa clear wr")
                 self.clear_figures_wr()
             else:
+                print("hola no es clear weather radar")
                 self.clear_figures()
 
         self.__update(dataOut, tm)
